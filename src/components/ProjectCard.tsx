@@ -8,11 +8,8 @@ interface ProjectCardProps {
 
 const ProjectCard = ({ project, index }: ProjectCardProps) => {
   return (
-    <motion.a
-      href={project.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group glass-card rounded-xl p-6 flex flex-col neon-border-hover transition-all duration-500 cursor-pointer"
+    <motion.div
+      className="group glass-card rounded-xl p-6 flex flex-col neon-border-hover transition-all duration-500"
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
@@ -29,12 +26,22 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
       </h3>
 
       {/* Description */}
-      <p className="text-muted-foreground text-sm leading-relaxed mb-5 flex-1">
+      <p className="text-muted-foreground text-sm leading-relaxed mb-5">
         {project.description}
       </p>
 
+      {/* Screenshot */}
+      <div className="rounded-lg overflow-hidden border border-border mb-5">
+        <img
+          src={project.screenshot}
+          alt={`${project.name} homepage screenshot`}
+          className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+      </div>
+
       {/* Tech Stack */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 mt-auto">
         {project.techStack.map((tech) => (
           <span
             key={tech}
@@ -44,15 +51,7 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
           </span>
         ))}
       </div>
-
-      {/* View link */}
-      <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-primary text-xs font-display tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <span>View Live</span>
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M17 7H7M17 7v10" />
-        </svg>
-      </div>
-    </motion.a>
+    </motion.div>
   );
 };
 
