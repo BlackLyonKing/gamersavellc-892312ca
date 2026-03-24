@@ -1,0 +1,355 @@
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { LogOut, Plus, FolderOpen, MessageSquare, Clock, DollarSign, ArrowLeft, Send, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+type ProjectStatus = "pending" | "quoted" | "accepted" | "in_progress" | "review" | "delivered" | "completed";
+type PaymentStatus = "unpaid" | "partial" | "paid";
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  status: ProjectStatus;
+  payment_status: PaymentStatus;
+  quoted_amount: number;
+  paid_amount: number;
+  progress: number;
+  tech_stack: string[];
+  estimated_timeline: string;
+  created_at: string;
+}
+
+interface Milestone {
+  id: string;
+  title: string;
+  description: string;
+  is_completed: boolean;
+  due_date: string | null;
+  sort_order: number;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  is_from_client: boolean;
+  created_at: string;
+}
+
+const statusColors: Record<ProjectStatus, string> = {
+  pending: "bg-muted text-muted-foreground",
+  quoted: "bg-accent/20 text-accent",
+  accepted: "bg-primary/20 text-primary",
+  in_progress: "bg-primary/30 text-primary",
+  review: "bg-accent/30 text-accent",
+  delivered: "bg-primary/40 text-primary",
+  completed: "bg-primary text-primary-foreground",
+};
+
+const paymentColors: Record<PaymentStatus, string> = {
+  unpaid: "bg-destructive/20 text-destructive",
+  partial: "bg-accent/20 text-accent",
+  paid: "bg-primary/20 text-primary",
+};
+
+const Dashboard = () => {
+  const { user, signOut, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [newProjectDesc, setNewProjectDesc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+
+  useEffect(() => {
+    if (!authLoading && !user) navigate("/auth");
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchMilestones(selectedProject.id);
+      fetchMessages(selectedProject.id);
+
+      const channel = supabase
+        .channel(`messages-${selectedProject.id}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "project_messages", filter: `project_id=eq.${selectedProject.id}` }, (payload) => {
+          setMessages((prev) => [...prev, payload.new as Message]);
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [selectedProject]);
+
+  const fetchProjects = async () => {
+    const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
+    setProjects((data as Project[]) || []);
+    setLoadingProjects(false);
+  };
+
+  const fetchMilestones = async (projectId: string) => {
+    const { data } = await supabase.from("milestones").select("*").eq("project_id", projectId).order("sort_order");
+    setMilestones((data as Milestone[]) || []);
+  };
+
+  const fetchMessages = async (projectId: string) => {
+    const { data } = await supabase.from("project_messages").select("*").eq("project_id", projectId).order("created_at");
+    setMessages((data as Message[]) || []);
+  };
+
+  const submitProject = async () => {
+    if (!newProjectTitle.trim() || !newProjectDesc.trim()) return;
+    setSubmitting(true);
+    const { error } = await supabase.from("projects").insert({
+      client_id: user!.id,
+      title: newProjectTitle,
+      description: newProjectDesc,
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Project submitted!" });
+      setNewProjectTitle("");
+      setNewProjectDesc("");
+      setDialogOpen(false);
+      fetchProjects();
+    }
+    setSubmitting(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedProject) return;
+    const { error } = await supabase.from("project_messages").insert({
+      project_id: selectedProject.id,
+      sender_id: user!.id,
+      content: newMessage,
+      is_from_client: true,
+    });
+    if (error) {
+      toast({ title: "Error sending message", variant: "destructive" });
+    }
+    setNewMessage("");
+  };
+
+  if (authLoading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {selectedProject ? (
+              <Button variant="ghost" size="icon" onClick={() => setSelectedProject(null)}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            ) : (
+              <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button></Link>
+            )}
+            <div>
+              <h1 className="font-display text-lg font-bold text-foreground">
+                {selectedProject ? selectedProject.title : "Client Portal"}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {selectedProject ? `Status: ${selectedProject.status.replace("_", " ")}` : `Welcome, ${user?.user_metadata?.full_name || user?.email}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!selectedProject && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase">
+                    <Plus className="h-4 w-4" /> New Project
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Submit a New Project</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <Input placeholder="Project title" value={newProjectTitle} onChange={(e) => setNewProjectTitle(e.target.value)} />
+                    <Textarea placeholder="Describe what you need built — the more detail, the better the quote..." value={newProjectDesc} onChange={(e) => setNewProjectDesc(e.target.value)} className="min-h-[120px]" />
+                    <Button onClick={submitProject} disabled={submitting} className="w-full font-display text-sm tracking-wider uppercase">
+                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit Project"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
+              <LogOut className="h-4 w-4" /> Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {!selectedProject ? (
+          /* Project List */
+          <>
+            {loadingProjects ? (
+              <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
+            ) : projects.length === 0 ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+                <FolderOpen className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground font-display">No projects yet</p>
+                <p className="text-sm text-muted-foreground mt-2">Click "New Project" to get started</p>
+              </motion.div>
+            ) : (
+              <div className="grid gap-4">
+                {projects.map((project, i) => (
+                  <motion.div key={project.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                    <Card className="glass-card neon-border neon-border-hover cursor-pointer transition-all" onClick={() => setSelectedProject(project)}>
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-display text-base font-semibold text-foreground">{project.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{project.description}</p>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Badge className={statusColors[project.status]}>{project.status.replace("_", " ")}</Badge>
+                            <Badge className={paymentColors[project.payment_status]}>{project.payment_status}</Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                          {project.quoted_amount > 0 && (
+                            <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />${project.quoted_amount.toLocaleString()}</span>
+                          )}
+                          {project.estimated_timeline && (
+                            <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{project.estimated_timeline}</span>
+                          )}
+                          <div className="flex-1" />
+                          <div className="flex items-center gap-2 w-32">
+                            <Progress value={project.progress} className="h-2" />
+                            <span className="text-xs">{project.progress}%</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Project Detail View */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Overview */}
+              <Card className="glass-card neon-border">
+                <CardHeader><CardTitle className="font-display text-base">Project Overview</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm mb-4">{selectedProject.description}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <Badge className={`mt-1 ${statusColors[selectedProject.status]}`}>{selectedProject.status.replace("_", " ")}</Badge>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Payment</p>
+                      <Badge className={`mt-1 ${paymentColors[selectedProject.payment_status]}`}>{selectedProject.payment_status}</Badge>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Quote</p>
+                      <p className="font-display font-bold text-foreground">${selectedProject.quoted_amount.toLocaleString()}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Progress</p>
+                      <Progress value={selectedProject.progress} className="h-2 mt-2" />
+                      <p className="text-xs mt-1 text-foreground">{selectedProject.progress}%</p>
+                    </div>
+                  </div>
+                  {selectedProject.tech_stack.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {selectedProject.tech_stack.map((t) => <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>)}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Milestones */}
+              <Card className="glass-card neon-border">
+                <CardHeader><CardTitle className="font-display text-base">Milestones</CardTitle></CardHeader>
+                <CardContent>
+                  {milestones.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No milestones added yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {milestones.map((m) => (
+                        <div key={m.id} className="flex items-center gap-3">
+                          <div className={`h-3 w-3 rounded-full flex-shrink-0 ${m.is_completed ? "bg-primary" : "bg-border"}`} />
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium ${m.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{m.title}</p>
+                            {m.description && <p className="text-xs text-muted-foreground">{m.description}</p>}
+                          </div>
+                          {m.due_date && <span className="text-xs text-muted-foreground">{new Date(m.due_date).toLocaleDateString()}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Messages sidebar */}
+            <Card className="glass-card neon-border lg:sticky lg:top-20 h-fit">
+              <CardHeader>
+                <CardTitle className="font-display text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Messages
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px] overflow-y-auto space-y-3 mb-4 pr-2">
+                  {messages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No messages yet. Start the conversation!</p>
+                  ) : (
+                    messages.map((m) => (
+                      <div key={m.id} className={`flex ${m.is_from_client ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${m.is_from_client ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                          {m.content}
+                          <p className="text-[10px] opacity-60 mt-1">{new Date(m.created_at).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} />
+                  <Button size="icon" onClick={sendMessage}><Send className="h-4 w-4" /></Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
