@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import heroBg from "@/assets/hero-bg.jpg";
+import logo from "@/assets/logo.png";
 
 const HeroSection = () => {
   return (
@@ -24,6 +25,7 @@ const HeroSection = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
+          <img src={logo} alt="Gamers Ave LLC Logo" className="w-28 h-28 mx-auto mb-4 rounded-full" />
           <p className="text-primary font-display text-sm tracking-[0.3em] uppercase mb-6">
             Software & Web3 Development
           </p>
