@@ -25,7 +25,7 @@ const HeroSection = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <img src={logo} alt="Gamers Ave LLC Logo" className="w-44 h-44 md:w-56 md:h-56 mx-auto mb-6 rounded-full shadow-[0_0_40px_hsl(160_100%_45%/0.3),0_0_80px_hsl(160_100%_45%/0.15)]" />
+          <img src={logo} alt="Gamers Ave LLC Logo" className="w-44 md:w-56 mx-auto mb-6 object-contain drop-shadow-[0_0_30px_hsl(160_100%_45%/0.3)]" />
           <p className="text-primary font-display text-sm tracking-[0.3em] uppercase mb-6">
             Software & Web3 Development
           </p>
