@@ -153,9 +153,10 @@ const AdminDashboard = () => {
     setMessages((data as Message[]) || []);
   };
 
-  const updateProject = async (field: string, value: any) => {
+  const updateProject = async (field: keyof Project, value: any) => {
     if (!selectedProject) return;
-    const { error } = await supabase.from("projects").update({ [field]: value, updated_at: new Date().toISOString() }).eq("id", selectedProject.id);
+    const updateData: Record<string, any> = { [field]: value, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from("projects").update(updateData as any).eq("id", selectedProject.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
