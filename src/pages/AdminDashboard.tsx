@@ -882,6 +882,7 @@ interface ProjectDetailProps {
   setNewMilestoneDesc: (v: string) => void;
   newMilestoneDue: string;
   setNewMilestoneDue: (v: string) => void;
+  onDeleteProject: (id: string) => void;
 }
 
 const ProjectDetail = ({
@@ -889,7 +890,7 @@ const ProjectDetail = ({
   onSendMessage, onUpdateProject, onAddMilestone, onToggleMilestone,
   onDeleteMilestone, milestoneDialogOpen, setMilestoneDialogOpen,
   newMilestoneTitle, setNewMilestoneTitle, newMilestoneDesc, setNewMilestoneDesc,
-  newMilestoneDue, setNewMilestoneDue,
+  newMilestoneDue, setNewMilestoneDue, onDeleteProject,
 }: ProjectDetailProps) => (
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div className="lg:col-span-2 space-y-6">
@@ -933,6 +934,12 @@ const ProjectDetail = ({
               <label className="text-xs text-muted-foreground block mb-1">Timeline</label>
               <Input value={(project as any).estimated_timeline || ""} onChange={(e) => onUpdateProject("estimated_timeline" as any, e.target.value)} placeholder="e.g. 6-8 weeks" />
             </div>
+          </div>
+
+          <div className="border-t border-border pt-4 mt-4">
+            <Button variant="destructive" size="sm" className="gap-2" onClick={() => onDeleteProject(project.id)}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete Project
+            </Button>
           </div>
 
           {profiles[project.client_id] && (
