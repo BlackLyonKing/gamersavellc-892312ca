@@ -32,6 +32,14 @@ interface PaymentMilestone {
   dueDate?: string;
 }
 
+interface MonthlyPaymentPlan {
+  termMonths: number;
+  monthlyAmount: number;
+  totalWithFees: number;
+  financingFeePercent: number;
+  financingFeeAmount: number;
+}
+
 interface GeneratedContract {
   contractTitle: string;
   effectiveDate: string;
@@ -41,6 +49,7 @@ interface GeneratedContract {
   totalMonthly: number;
   grandTotal: number;
   paymentSchedule: PaymentMilestone[];
+  monthlyPaymentPlans: MonthlyPaymentPlan[];
   fullContractText: string;
   keyTerms: string[];
 }
