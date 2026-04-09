@@ -437,6 +437,37 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
     }
   };
 
+  const startEditContract = (c: ContractRecord) => {
+    setEditingContractId(c.id);
+    setEditFields({ title: c.title, scope_summary: c.scope_summary, terms_text: c.terms_text, total_amount: c.total_amount, recurring_monthly: c.recurring_monthly });
+  };
+
+  const saveContractEdit = async () => {
+    if (!editingContractId) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("contracts").update({
+      title: editFields.title,
+      scope_summary: editFields.scope_summary,
+      terms_text: editFields.terms_text,
+      total_amount: editFields.total_amount,
+      recurring_monthly: editFields.recurring_monthly,
+      updated_at: new Date().toISOString(),
+    } as any).eq("id", editingContractId);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    else {
+      setContracts((prev) => prev.map(c => c.id === editingContractId ? { ...c, ...editFields } : c));
+      setEditingContractId(null);
+      toast({ title: "Contract updated!" });
+    }
+    setSavingEdit(false);
+  };
+
+  const deleteContract = async (id: string) => {
+    const { error } = await supabase.from("contracts").delete().eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    else { setContracts(prev => prev.filter(c => c.id !== id)); toast({ title: "Contract deleted" }); }
+  };
+
   const downloadContractPdf = useCallback((contract: ContractRecord) => {
     const doc = new jsPDF({ unit: "pt", format: "letter" });
     const pageWidth = doc.internal.pageSize.getWidth();
