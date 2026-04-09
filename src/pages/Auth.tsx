@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,15 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(isAdmin ? "/admin" : "/dashboard", { replace: true });
+    }
+  }, [authLoading, user, isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +39,6 @@ const Auth = () => {
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        navigate("/dashboard");
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -54,7 +59,7 @@ const Auth = () => {
           <CardHeader className="text-center">
             <CardTitle className="font-display text-2xl">{isSignUp ? "Create Account" : "Welcome Back"}</CardTitle>
             <CardDescription>
-              {isSignUp ? "Start your project with Gamers Ave LLC" : "Sign in to your client portal"}
+              {isSignUp ? "Start your project with Gamers Ave LLC" : "Sign in to your portal"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -83,12 +88,15 @@ const Auth = () => {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} />
               </div>
-              <Button type="submit" className="w-full font-display text-sm tracking-wider uppercase" disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isSignUp ? "Create Account" : "Sign In"}
+              <Button type="submit" className="w-full font-display text-sm tracking-wider uppercase" disabled={loading || authLoading}>
+                {loading || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isSignUp ? "Create Account" : "Sign In"}
               </Button>
             </form>
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Admin accounts automatically open the admin dashboard after sign in.
+            </p>
             <div className="mt-4 text-center">
-              <button onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-primary hover:underline">
+              <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-primary hover:underline">
                 {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
               </button>
             </div>
