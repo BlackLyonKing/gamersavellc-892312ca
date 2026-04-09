@@ -14,6 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
+      contracts: {
+        Row: {
+          client_id: string
+          contract_number: string
+          created_at: string
+          expires_at: string | null
+          fee_breakdown: Json
+          id: string
+          project_id: string | null
+          recurring_monthly: number
+          scope_summary: string
+          signed_at: string | null
+          status: Database["public"]["Enums"]["contract_status"]
+          terms_text: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          contract_number: string
+          created_at?: string
+          expires_at?: string | null
+          fee_breakdown?: Json
+          id?: string
+          project_id?: string | null
+          recurring_monthly?: number
+          scope_summary?: string
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          terms_text?: string
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          contract_number?: string
+          created_at?: string
+          expires_at?: string | null
+          fee_breakdown?: Json
+          id?: string
+          project_id?: string | null
+          recurring_monthly?: number
+          scope_summary?: string
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          terms_text?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          paid_at: string | null
+          project_id: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          contract_id?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          paid_at?: string | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          contract_id?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          paid_at?: string | null
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           completed_at: string | null
@@ -242,6 +370,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "client"
+      contract_status: "draft" | "sent" | "signed" | "expired"
+      invoice_status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
       payment_status: "unpaid" | "partial" | "paid"
       project_status:
         | "pending"
@@ -379,6 +509,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "client"],
+      contract_status: ["draft", "sent", "signed", "expired"],
+      invoice_status: ["draft", "sent", "paid", "overdue", "cancelled"],
       payment_status: ["unpaid", "partial", "paid"],
       project_status: [
         "pending",
