@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download
+  FolderOpen, FileText, Receipt, Users, Download, Shield
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -21,6 +21,7 @@ import AdminStats from "@/components/admin/AdminStats";
 import AdminProjectList from "@/components/admin/AdminProjectList";
 import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminClients from "@/components/admin/AdminClients";
+import AdminUserManagement from "@/components/admin/AdminUserManagement";
 import type { Project, Profile, ProjectStatus, PaymentStatus } from "@/components/admin/AdminProjectList";
 import { statusColors, paymentColors } from "@/components/admin/AdminProjectList";
 
@@ -247,6 +248,9 @@ const AdminDashboard = () => {
                 <TabsTrigger value="clients" className="gap-2 font-display text-xs">
                   <Users className="h-3.5 w-3.5" /> Clients
                 </TabsTrigger>
+                <TabsTrigger value="users" className="gap-2 font-display text-xs">
+                  <Shield className="h-3.5 w-3.5" /> User Management
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="projects">
@@ -272,6 +276,10 @@ const AdminDashboard = () => {
                   projectSummaries={projectSummaries}
                   loading={loadingProjects}
                 />
+              </TabsContent>
+
+              <TabsContent value="users">
+                <AdminUserManagement />
               </TabsContent>
             </Tabs>
           </>
