@@ -111,6 +111,9 @@ const Contracts = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewContract, setViewContract] = useState<ContractRecord | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editFields, setEditFields] = useState({ title: "", scope_summary: "", terms_text: "", total_amount: 0, recurring_monthly: 0 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
