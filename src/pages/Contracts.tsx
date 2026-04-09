@@ -32,6 +32,14 @@ interface PaymentMilestone {
   dueDate?: string;
 }
 
+interface MonthlyPaymentPlan {
+  termMonths: number;
+  monthlyAmount: number;
+  totalWithFees: number;
+  financingFeePercent: number;
+  financingFeeAmount: number;
+}
+
 interface GeneratedContract {
   contractTitle: string;
   effectiveDate: string;
@@ -41,6 +49,7 @@ interface GeneratedContract {
   totalMonthly: number;
   grandTotal: number;
   paymentSchedule: PaymentMilestone[];
+  monthlyPaymentPlans: MonthlyPaymentPlan[];
   fullContractText: string;
   keyTerms: string[];
 }
@@ -444,6 +453,35 @@ const Contracts = () => {
                       ))}
                     </CardContent>
                   </Card>
+
+                  {/* Monthly Payment Plans */}
+                  {generatedContract.monthlyPaymentPlans && generatedContract.monthlyPaymentPlans.length > 0 && (
+                    <Card className="glass-card neon-border">
+                      <CardHeader className="pb-2"><CardTitle className="font-display text-sm">Monthly Payment Plan Options</CardTitle></CardHeader>
+                      <CardContent>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Break the ${generatedContract.totalOneTime.toLocaleString()} one-time cost into monthly payments:
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {generatedContract.monthlyPaymentPlans.map((plan, i) => (
+                            <div key={i} className="border border-border rounded-lg p-3 space-y-1">
+                              <div className="font-display font-bold text-foreground text-base">
+                                ${plan.monthlyAmount.toLocaleString()}<span className="text-xs text-muted-foreground font-normal">/mo</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">{plan.termMonths} months</div>
+                              {plan.financingFeePercent > 0 ? (
+                                <div className="text-[10px] text-muted-foreground">
+                                  {plan.financingFeePercent}% fee · Total: ${plan.totalWithFees.toLocaleString()}
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-primary">0% interest</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Key Terms */}
                   <Card className="glass-card neon-border">
