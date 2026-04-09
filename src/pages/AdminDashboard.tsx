@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette
+  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -408,6 +408,11 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
   const [customTitle, setCustomTitle] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [generatedContract, setGeneratedContract] = useState<GeneratedContract | null>(null);
+
+  // Inline editing state
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState({ title: "", scope_summary: "", terms_text: "", total_amount: 0, recurring_monthly: 0 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchContracts = useCallback(async () => {
     const { data } = await supabase.from("contracts").select("*").order("created_at", { ascending: false });
