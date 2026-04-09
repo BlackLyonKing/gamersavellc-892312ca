@@ -552,24 +552,53 @@ const Contracts = () => {
         {viewContract ? (
           /* Contract Detail View */
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Button variant="ghost" size="sm" onClick={() => setViewContract(null)} className="mb-4 gap-2">
-              <ArrowLeft className="h-4 w-4" /> Back to contracts
-            </Button>
+            <div className="flex items-center gap-2 mb-4">
+              <Button variant="ghost" size="sm" onClick={() => { setViewContract(null); setEditing(false); }} className="gap-2">
+                <ArrowLeft className="h-4 w-4" /> Back to contracts
+              </Button>
+              <div className="flex-1" />
+              {!editing ? (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => startEditing(viewContract)}>
+                  <Pencil className="h-4 w-4" /> Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" onClick={cancelEditing}>
+                    <X className="h-4 w-4" /> Cancel
+                  </Button>
+                  <Button size="sm" className="gap-2" onClick={saveEdits} disabled={savingEdit}>
+                    {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Changes
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 <Card className="glass-card neon-border">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="font-display text-base">{viewContract.title}</CardTitle>
+                      {editing ? (
+                        <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} className="font-display text-base font-semibold" />
+                      ) : (
+                        <CardTitle className="font-display text-base">{viewContract.title}</CardTitle>
+                      )}
                       <Badge className={statusColors[viewContract.status]}>{viewContract.status}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">#{viewContract.contract_number}</p>
                   </CardHeader>
                   <CardContent>
-                    <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
-                      {viewContract.terms_text}
-                    </pre>
+                    {editing ? (
+                      <Textarea
+                        value={editFields.terms_text}
+                        onChange={(e) => setEditFields({ ...editFields, terms_text: e.target.value })}
+                        className="min-h-[400px] text-sm font-sans leading-relaxed"
+                      />
+                    ) : (
+                      <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                        {viewContract.terms_text}
+                      </pre>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -578,17 +607,45 @@ const Contracts = () => {
                 <Card className="glass-card neon-border">
                   <CardHeader><CardTitle className="font-display text-sm">Summary</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{viewContract.scope_summary}</p>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-display font-bold gradient-text">${viewContract.total_amount.toLocaleString()}</span>
-                    </div>
-                    {viewContract.recurring_monthly > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Monthly</span>
-                        <span className="font-display font-semibold text-accent">${viewContract.recurring_monthly.toLocaleString()}/mo</span>
-                      </div>
+                    {editing ? (
+                      <Textarea
+                        value={editFields.scope_summary}
+                        onChange={(e) => setEditFields({ ...editFields, scope_summary: e.target.value })}
+                        className="min-h-[80px] text-sm"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{viewContract.scope_summary}</p>
                     )}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      {editing ? (
+                        <Input
+                          type="number"
+                          value={editFields.total_amount}
+                          onChange={(e) => setEditFields({ ...editFields, total_amount: parseFloat(e.target.value) || 0 })}
+                          className="w-32 text-right font-display font-bold"
+                        />
+                      ) : (
+                        <span className="font-display font-bold gradient-text">${viewContract.total_amount.toLocaleString()}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Monthly</span>
+                      {editing ? (
+                        <Input
+                          type="number"
+                          value={editFields.recurring_monthly}
+                          onChange={(e) => setEditFields({ ...editFields, recurring_monthly: parseFloat(e.target.value) || 0 })}
+                          className="w-32 text-right font-display font-semibold"
+                        />
+                      ) : (
+                        viewContract.recurring_monthly > 0 ? (
+                          <span className="font-display font-semibold text-accent">${viewContract.recurring_monthly.toLocaleString()}/mo</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
 
