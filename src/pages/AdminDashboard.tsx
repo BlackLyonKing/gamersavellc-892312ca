@@ -522,6 +522,7 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
 
     doc.save(`${contract.contract_number}-${contract.title.replace(/\s+/g, "-")}.pdf`);
   }, []);
+  const generateContract = async () => {
     const project = contractProjects.find((p) => p.id === selectedProjectId);
     const title = project?.title || customTitle;
     const desc = project?.description || customDesc;
