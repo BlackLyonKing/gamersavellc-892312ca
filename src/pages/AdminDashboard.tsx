@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users
+  FolderOpen, FileText, Receipt, Users, Download
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -637,6 +637,9 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
                         Mark Signed
                       </Button>
                     )}
+                    <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => downloadContractPdf(contract)}>
+                      <Download className="h-3.5 w-3.5" /> PDF
+                    </Button>
                   </div>
                 </div>
               </CardContent>
