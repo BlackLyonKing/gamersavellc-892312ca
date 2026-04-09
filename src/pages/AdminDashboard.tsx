@@ -765,44 +765,84 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
         </div>
       ) : (
         <div className="grid gap-4">
-          {contracts.map((contract) => (
-            <Card key={contract.id} className="glass-card neon-border">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">{contract.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      #{contract.contract_number} · {profiles[contract.client_id]?.full_name || "Unknown"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{contract.scope_summary}</p>
-                  </div>
-                  <Badge className={contractStatusColors[contract.status]}>{contract.status}</Badge>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
-                  <span className="font-display font-semibold text-foreground">${contract.total_amount.toLocaleString()}</span>
-                  {contract.recurring_monthly > 0 && (
-                    <span className="text-accent">+ ${contract.recurring_monthly.toLocaleString()}/mo</span>
+          {contracts.map((contract) => {
+            const isEditing = editingContractId === contract.id;
+            return (
+              <Card key={contract.id} className="glass-card neon-border">
+                <CardContent className="p-6">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Title</label>
+                        <Input value={editFields.title} onChange={e => setEditFields({ ...editFields, title: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Scope Summary</label>
+                        <Textarea value={editFields.scope_summary} onChange={e => setEditFields({ ...editFields, scope_summary: e.target.value })} rows={3} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Total Amount</label>
+                          <Input type="number" value={editFields.total_amount} onChange={e => setEditFields({ ...editFields, total_amount: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Monthly Recurring</label>
+                          <Input type="number" value={editFields.recurring_monthly} onChange={e => setEditFields({ ...editFields, recurring_monthly: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Terms Text</label>
+                        <Textarea value={editFields.terms_text} onChange={e => setEditFields({ ...editFields, terms_text: e.target.value })} rows={5} />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="ghost" onClick={() => setEditingContractId(null)} className="gap-1"><X className="h-3.5 w-3.5" /> Cancel</Button>
+                        <Button size="sm" onClick={saveContractEdit} disabled={savingEdit} className="gap-1">
+                          {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-display text-sm font-semibold text-foreground">{contract.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            #{contract.contract_number} · {profiles[contract.client_id]?.full_name || "Unknown"}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{contract.scope_summary}</p>
+                        </div>
+                        <Badge className={contractStatusColors[contract.status]}>{contract.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
+                        <span className="font-display font-semibold text-foreground">${contract.total_amount.toLocaleString()}</span>
+                        {contract.recurring_monthly > 0 && (
+                          <span className="text-accent">+ ${contract.recurring_monthly.toLocaleString()}/mo</span>
+                        )}
+                        <div className="flex-1" />
+                        <div className="flex gap-2">
+                          {contract.status === "draft" && (
+                            <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "sent")}>Mark Sent</Button>
+                          )}
+                          {contract.status === "sent" && (
+                            <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "signed")}>Mark Signed</Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => startEditContract(contract)}>
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => downloadContractPdf(contract)}>
+                            <Download className="h-3.5 w-3.5" /> PDF
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs gap-1 text-destructive hover:text-destructive" onClick={() => deleteContract(contract.id)}>
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </>
                   )}
-                  <div className="flex-1" />
-                  <div className="flex gap-2">
-                    {contract.status === "draft" && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "sent")}>
-                        Mark Sent
-                      </Button>
-                    )}
-                    {contract.status === "sent" && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "signed")}>
-                        Mark Signed
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => downloadContractPdf(contract)}>
-                      <Download className="h-3.5 w-3.5" /> PDF
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
