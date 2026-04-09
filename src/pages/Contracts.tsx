@@ -229,6 +229,41 @@ const Contracts = () => {
     }
   };
 
+  const startEditing = (contract: ContractRecord) => {
+    setEditFields({
+      title: contract.title,
+      scope_summary: contract.scope_summary,
+      terms_text: contract.terms_text,
+      total_amount: contract.total_amount,
+      recurring_monthly: contract.recurring_monthly,
+    });
+    setEditing(true);
+  };
+
+  const cancelEditing = () => { setEditing(false); };
+
+  const saveEdits = async () => {
+    if (!viewContract) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("contracts").update({
+      title: editFields.title,
+      scope_summary: editFields.scope_summary,
+      terms_text: editFields.terms_text,
+      total_amount: editFields.total_amount,
+      recurring_monthly: editFields.recurring_monthly,
+    } as any).eq("id", viewContract.id);
+    if (error) {
+      toast({ title: "Error saving", description: error.message, variant: "destructive" });
+    } else {
+      const updated = { ...viewContract, ...editFields };
+      setViewContract(updated);
+      setEditing(false);
+      fetchContracts();
+      toast({ title: "Contract updated!" });
+    }
+    setSavingEdit(false);
+  };
+
   const downloadContract = useCallback((contract: ContractRecord) => {
     const doc = new jsPDF({ unit: "pt", format: "letter" });
     const pageWidth = doc.internal.pageSize.getWidth();
