@@ -147,6 +147,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const deleteProject = async (id: string) => {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setProjects(prev => prev.filter(p => p.id !== id));
+      setSelectedProject(null);
+      toast({ title: "Project deleted" });
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedProject) return;
     const { error } = await supabase.from("project_messages").insert({
