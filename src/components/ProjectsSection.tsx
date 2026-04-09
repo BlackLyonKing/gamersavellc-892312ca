@@ -1,13 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { projects } from "@/data/projects";
+import { supabase } from "@/integrations/supabase/client";
 import ProjectCard from "@/components/ProjectCard";
+import { Loader2 } from "lucide-react";
 
-const categories = ["All", ...Array.from(new Set(projects.map((p) => p.category)))];
+interface PortfolioProject {
+  id: string;
+  name: string;
+  description: string;
+  tech_stack: string[];
+  category: string;
+  screenshot: string;
+}
 
 const ProjectsSection = () => {
   const [active, setActive] = useState("All");
+  const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    supabase
+      .from("portfolio_projects")
+      .select("*")
+      .order("sort_order")
+      .then(({ data }) => {
+        setProjects((data as PortfolioProject[]) || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const categories = ["All", ...Array.from(new Set(projects.map((p) => p.category)))];
   const filtered = active === "All" ? projects : projects.filter((p) => p.category === active);
 
   return (
@@ -31,29 +53,33 @@ const ProjectsSection = () => {
           </p>
         </motion.div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActive(cat)}
-              className={`px-4 py-2 rounded-lg text-xs font-display tracking-wider uppercase transition-all duration-300 ${
-                active === cat
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
+        ) : (
+          <>
+            <div className="flex flex-wrap justify-center gap-2 mb-12">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActive(cat)}
+                  className={`px-4 py-2 rounded-lg text-xs font-display tracking-wider uppercase transition-all duration-300 ${
+                    active === cat
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((project, i) => (
-            <ProjectCard key={project.id} project={project} index={i} />
-          ))}
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filtered.map((project, i) => (
+                <ProjectCard key={project.id} project={project} index={i} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

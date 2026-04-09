@@ -186,6 +186,42 @@ export type Database = {
           },
         ]
       }
+      portfolio_projects: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          screenshot: string
+          sort_order: number
+          tech_stack: string[]
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          screenshot?: string
+          sort_order?: number
+          tech_stack?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          screenshot?: string
+          sort_order?: number
+          tech_stack?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
