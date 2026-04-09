@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ArrowLeft, Loader2, FileText, Plus, DollarSign, Download, Send, Eye,
+  ArrowLeft, Loader2, FileText, Plus, DollarSign, Download, Send, Eye, Pencil, Save, X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
