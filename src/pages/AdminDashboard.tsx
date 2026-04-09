@@ -249,9 +249,16 @@ const AdminDashboard = () => {
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
-            <LogOut className="h-4 w-4" /> Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/contracts">
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground font-display">
+                Contracts
+              </Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
+              <LogOut className="h-4 w-4" /> Sign Out
+            </Button>
+          </div>
         </div>
       </div>
 
