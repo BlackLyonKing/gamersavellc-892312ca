@@ -326,6 +326,52 @@ interface ContractRecord {
   client_id: string;
 }
 
+interface ContractProject {
+  id: string;
+  title: string;
+  description: string;
+  quoted_amount: number | null;
+  tech_stack: string[] | null;
+  estimated_timeline: string | null;
+  client_id: string;
+}
+
+interface FeeItem {
+  category: string;
+  type: "one_time" | "monthly" | "hourly" | "milestone";
+  amount: number;
+  description: string;
+  hours?: number;
+  rate?: number;
+}
+
+interface PaymentMilestone {
+  milestone: string;
+  percentage: number;
+  amount: number;
+  dueDate?: string;
+}
+
+interface GeneratedContract {
+  contractTitle: string;
+  effectiveDate: string;
+  scopeSummary: string;
+  feeBreakdown: FeeItem[];
+  totalOneTime: number;
+  totalMonthly: number;
+  grandTotal: number;
+  paymentSchedule: PaymentMilestone[];
+  fullContractText: string;
+  keyTerms: string[];
+}
+
+const feeTypeLabels: Record<string, string> = {
+  one_time: "One-Time",
+  monthly: "Monthly",
+  hourly: "Hourly",
+  milestone: "Milestone",
+};
+
 const contractStatusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   sent: "bg-accent/20 text-accent",
@@ -334,16 +380,31 @@ const contractStatusColors: Record<string, string> = {
 };
 
 const ContractsInline = ({ profiles }: ContractsInlineProps) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
+  const [contractProjects, setContractProjects] = useState<ContractProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [customTitle, setCustomTitle] = useState("");
+  const [customDesc, setCustomDesc] = useState("");
+  const [generatedContract, setGeneratedContract] = useState<GeneratedContract | null>(null);
+
+  const fetchContracts = useCallback(async () => {
+    const { data } = await supabase.from("contracts").select("*").order("created_at", { ascending: false });
+    setContracts((data as ContractRecord[]) || []);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    supabase.from("contracts").select("*").order("created_at", { ascending: false }).then(({ data }) => {
-      setContracts((data as ContractRecord[]) || []);
-      setLoading(false);
+    fetchContracts();
+    supabase.from("projects").select("id, title, description, quoted_amount, tech_stack, estimated_timeline, client_id").order("created_at", { ascending: false }).then(({ data }) => {
+      setContractProjects((data as ContractProject[]) || []);
     });
-  }, []);
+  }, [fetchContracts]);
 
   const updateStatus = async (id: string, status: string) => {
     const updateData: Record<string, any> = { status };
@@ -355,27 +416,198 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
     }
   };
 
+  const generateContract = async () => {
+    const project = contractProjects.find((p) => p.id === selectedProjectId);
+    const title = project?.title || customTitle;
+    const desc = project?.description || customDesc;
+
+    if (!title.trim() || !desc.trim()) {
+      toast({ title: "Please provide a project title and description", variant: "destructive" });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const clientProfile = project ? profiles[project.client_id] : null;
+      const { data, error } = await supabase.functions.invoke("generate-contract", {
+        body: {
+          projectTitle: title,
+          projectDescription: desc,
+          clientName: clientProfile?.full_name || "",
+          companyName: clientProfile?.company_name || "",
+          quotedAmount: project?.quoted_amount || 0,
+          techStack: project?.tech_stack || [],
+          estimatedTimeline: project?.estimated_timeline || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setGeneratedContract(data.contract);
+      toast({ title: "Contract generated!" });
+    } catch (e: any) {
+      toast({ title: "Generation failed", description: e.message, variant: "destructive" });
+    }
+    setGenerating(false);
+  };
+
+  const saveContract = async () => {
+    if (!generatedContract || !user) return;
+    setSaving(true);
+    const project = contractProjects.find((p) => p.id === selectedProjectId);
+    const contractNumber = `GA-${Date.now().toString(36).toUpperCase()}`;
+    const { error } = await supabase.from("contracts").insert({
+      project_id: project?.id || null,
+      client_id: project?.client_id || user.id,
+      contract_number: contractNumber,
+      title: generatedContract.contractTitle,
+      scope_summary: generatedContract.scopeSummary,
+      fee_breakdown: generatedContract.feeBreakdown as any,
+      total_amount: generatedContract.grandTotal,
+      recurring_monthly: generatedContract.totalMonthly,
+      terms_text: generatedContract.fullContractText,
+      status: "draft" as any,
+    });
+    if (error) {
+      toast({ title: "Error saving", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Contract saved!" });
+      setGeneratedContract(null);
+      setDialogOpen(false);
+      setSelectedProjectId("");
+      setCustomTitle("");
+      setCustomDesc("");
+      fetchContracts();
+    }
+    setSaving(false);
+  };
+
   if (loading) return <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-base font-semibold text-foreground">All Contracts</h2>
-        <a href="/#/contracts">
-          <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase">
-            <Plus className="h-4 w-4" /> Generate Contract
-          </Button>
-        </a>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setGeneratedContract(null); setSelectedProjectId(""); setCustomTitle(""); setCustomDesc(""); } }}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase">
+              <Plus className="h-4 w-4" /> Generate Contract
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display">Generate Contract</DialogTitle>
+            </DialogHeader>
+
+            {!generatedContract ? (
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="text-sm text-muted-foreground block mb-1">Link to existing project (optional)</label>
+                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                    <SelectTrigger><SelectValue placeholder="Select a project..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No linked project</SelectItem>
+                      {contractProjects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(!selectedProjectId || selectedProjectId === "none") && (
+                  <>
+                    <Input placeholder="Project title" value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} />
+                    <Textarea placeholder="Describe the project scope in detail..." value={customDesc} onChange={(e) => setCustomDesc(e.target.value)} className="min-h-[120px]" />
+                  </>
+                )}
+
+                <Button onClick={generateContract} disabled={generating} className="w-full font-display text-sm tracking-wider uppercase">
+                  {generating ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Generating...</> : "Generate Contract"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6 mt-4">
+                <div>
+                  <h3 className="font-display text-base font-semibold text-foreground">{generatedContract.contractTitle}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{generatedContract.scopeSummary}</p>
+                </div>
+
+                <Card className="glass-card neon-border">
+                  <CardHeader className="pb-2"><CardTitle className="font-display text-sm">Fee Breakdown</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {generatedContract.feeBreakdown.map((fee, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <div>
+                            <span className="text-foreground">{fee.category}</span>
+                            <Badge variant="secondary" className="ml-2 text-[10px]">{feeTypeLabels[fee.type]}</Badge>
+                          </div>
+                          <span className="font-display font-semibold text-foreground">${fee.amount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-border mt-4 pt-4 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">One-Time Total</span>
+                        <span className="font-display font-bold text-foreground">${generatedContract.totalOneTime.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Monthly Recurring</span>
+                        <span className="font-display font-bold text-accent">${generatedContract.totalMonthly.toLocaleString()}/mo</span>
+                      </div>
+                      <div className="flex justify-between text-base mt-2">
+                        <span className="font-display font-bold text-foreground">Grand Total</span>
+                        <span className="font-display font-bold gradient-text">${generatedContract.grandTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-card neon-border">
+                  <CardHeader className="pb-2"><CardTitle className="font-display text-sm">Payment Schedule</CardTitle></CardHeader>
+                  <CardContent>
+                    {generatedContract.paymentSchedule.map((ps, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1">
+                        <span className="text-muted-foreground">{ps.milestone} ({ps.percentage}%)</span>
+                        <span className="font-display font-semibold text-foreground">${ps.amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-card neon-border">
+                  <CardHeader className="pb-2"><CardTitle className="font-display text-sm">Key Terms</CardTitle></CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1">
+                      {generatedContract.keyTerms.map((term, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-primary mt-1">•</span>{term}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <div className="flex gap-3">
+                  <Button onClick={saveContract} disabled={saving} className="flex-1 font-display text-sm tracking-wider uppercase">
+                    {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Save Contract"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setGeneratedContract(null)}>Regenerate</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       {contracts.length === 0 ? (
         <div className="text-center py-16">
           <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
           <p className="text-muted-foreground font-display">No contracts yet</p>
+          <p className="text-sm text-muted-foreground mt-1">Click "Generate Contract" to create your first one</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {contracts.map((contract, i) => (
+          {contracts.map((contract) => (
             <Card key={contract.id} className="glass-card neon-border">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-2">
@@ -405,9 +637,6 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
                         Mark Signed
                       </Button>
                     )}
-                    <a href="/#/contracts">
-                      <Button size="sm" variant="ghost" className="text-xs">View Full</Button>
-                    </a>
                   </div>
                 </div>
               </CardContent>
