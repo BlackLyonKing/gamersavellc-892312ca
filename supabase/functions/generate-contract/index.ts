@@ -48,11 +48,17 @@ Include these fee categories where applicable:
 9. Cancellation/early termination fees (25% of remaining contract value)
 10. Late payment fees (1.5% monthly)
 
+You MUST generate monthly payment plan options for the total one-time project cost.
+Calculate plans for 3, 6, 9, and 12 month terms. For each term:
+- Monthly amount = total one-time cost / number of months (rounded to nearest cent)
+- Include a small financing fee: 0% for 3 months, 5% for 6 months, 8% for 9 months, 10% for 12 months
+- So monthly = (totalOneTime * (1 + fee%)) / months
+
 The contract must include:
 - Parties and effective date
 - Scope of work
 - Detailed fee schedule with all applicable categories
-- Payment terms (50% deposit, milestones, net-30)
+- Payment terms (50% deposit, milestones, net-30) AND monthly payment plan options
 - Intellectual property assignment upon full payment
 - Confidentiality clause
 - Warranty (30-day bug fix period)
@@ -131,6 +137,21 @@ Timeline: ${estimatedTimeline || "TBD"}`,
                     },
                   },
                   fullContractText: { type: "string", description: "The complete legal contract text with all clauses, formatted with section numbers" },
+                  monthlyPaymentPlans: {
+                    type: "array",
+                    description: "Monthly payment plan options for the total one-time cost with different term lengths",
+                    items: {
+                      type: "object",
+                      properties: {
+                        termMonths: { type: "number", description: "Number of months (3, 6, 9, or 12)" },
+                        monthlyAmount: { type: "number", description: "Monthly payment amount" },
+                        totalWithFees: { type: "number", description: "Total amount including any financing fee" },
+                        financingFeePercent: { type: "number", description: "Financing fee percentage (0, 5, 8, or 10)" },
+                        financingFeeAmount: { type: "number", description: "Total financing fee in dollars" },
+                      },
+                      required: ["termMonths", "monthlyAmount", "totalWithFees", "financingFeePercent", "financingFeeAmount"],
+                    },
+                  },
                   keyTerms: {
                     type: "array",
                     items: { type: "string" },
@@ -140,7 +161,7 @@ Timeline: ${estimatedTimeline || "TBD"}`,
                 required: [
                   "contractTitle", "effectiveDate", "scopeSummary", "feeBreakdown",
                   "totalOneTime", "totalMonthly", "grandTotal", "paymentSchedule",
-                  "fullContractText", "keyTerms",
+                  "monthlyPaymentPlans", "fullContractText", "keyTerms",
                 ],
                 additionalProperties: false,
               },
