@@ -530,7 +530,7 @@ const Contracts = () => {
                       </Button>
                     )}
                     <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => downloadContract(viewContract)}>
-                      <Download className="h-4 w-4" /> Download .txt
+                      <Download className="h-4 w-4" /> Download PDF
                     </Button>
                   </CardContent>
                 </Card>
