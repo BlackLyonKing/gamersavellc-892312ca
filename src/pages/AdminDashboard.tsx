@@ -416,7 +416,112 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
     }
   };
 
-  const generateContract = async () => {
+  const downloadContractPdf = useCallback((contract: ContractRecord) => {
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 50;
+    const usable = pageWidth - margin * 2;
+    let y = margin;
+
+    const checkPage = (needed: number) => {
+      if (y + needed > pageHeight - margin) { doc.addPage(); y = margin; }
+    };
+
+    // Header
+    doc.setFillColor(10, 10, 26);
+    doc.rect(0, 0, pageWidth, 80, "F");
+    doc.setTextColor(200, 255, 230);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(contract.title, margin, 45);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(160, 200, 180);
+    doc.text(`#${contract.contract_number}`, margin, 62);
+    doc.text(`Generated ${new Date(contract.created_at).toLocaleDateString()}`, pageWidth - margin, 62, { align: "right" });
+    y = 110;
+
+    // Summary
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("SCOPE SUMMARY", margin, y);
+    y += 18;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const summaryLines = doc.splitTextToSize(contract.scope_summary, usable);
+    checkPage(summaryLines.length * 14 + 10);
+    doc.text(summaryLines, margin, y);
+    y += summaryLines.length * 14 + 20;
+
+    // Fee breakdown
+    const fees = (Array.isArray(contract.fee_breakdown) ? contract.fee_breakdown : []) as FeeItem[];
+    if (fees.length > 0) {
+      checkPage(40 + fees.length * 22);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("FEE BREAKDOWN", margin, y);
+      y += 20;
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, y - 12, usable, 18, "F");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text("Category", margin + 6, y);
+      doc.text("Type", margin + 220, y);
+      doc.text("Amount", margin + usable - 10, y, { align: "right" });
+      y += 14;
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      fees.forEach((fee) => {
+        checkPage(20);
+        doc.text(fee.category || "", margin + 6, y);
+        doc.text(feeTypeLabels[fee.type] || fee.type, margin + 220, y);
+        doc.text(`$${(fee.amount || 0).toLocaleString()}`, margin + usable - 10, y, { align: "right" });
+        y += 18;
+      });
+      y += 4;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, y, margin + usable, y);
+      y += 16;
+      doc.setFont("helvetica", "bold");
+      doc.text("Total", margin + 6, y);
+      doc.text(`$${contract.total_amount.toLocaleString()}`, margin + usable - 10, y, { align: "right" });
+      y += 16;
+      if (contract.recurring_monthly > 0) {
+        doc.text("Monthly Recurring", margin + 6, y);
+        doc.text(`$${contract.recurring_monthly.toLocaleString()}/mo`, margin + usable - 10, y, { align: "right" });
+        y += 16;
+      }
+      y += 16;
+    }
+
+    // Terms
+    checkPage(30);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 40, 40);
+    doc.text("TERMS & CONDITIONS", margin, y);
+    y += 18;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const lines = doc.splitTextToSize(contract.terms_text, usable);
+    for (const line of lines) {
+      checkPage(14);
+      doc.text(line, margin, y);
+      y += 13;
+    }
+
+    // Footer
+    const footerY = pageHeight - 30;
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`${contract.contract_number} — Gamers Ave LLC`, margin, footerY);
+    doc.text("Confidential", pageWidth - margin, footerY, { align: "right" });
+
+    doc.save(`${contract.contract_number}-${contract.title.replace(/\s+/g, "-")}.pdf`);
+  }, []);
     const project = contractProjects.find((p) => p.id === selectedProjectId);
     const title = project?.title || customTitle;
     const desc = project?.description || customDesc;
