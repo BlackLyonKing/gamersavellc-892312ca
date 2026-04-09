@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import QuoteTool from "./pages/QuoteTool";
 import AdminDashboard from "./pages/AdminDashboard";
+import Contracts from "./pages/Contracts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/quote-tool" element={<QuoteTool />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/contracts" element={<Contracts />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
