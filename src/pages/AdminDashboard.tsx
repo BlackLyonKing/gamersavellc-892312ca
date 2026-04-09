@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette
+  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -144,6 +144,17 @@ const AdminDashboard = () => {
       setSelectedProject({ ...selectedProject, [field]: value } as Project);
       setProjects((prev) => prev.map((p) => p.id === selectedProject.id ? { ...p, [field]: value } : p));
       toast({ title: "Updated!" });
+    }
+  };
+
+  const deleteProject = async (id: string) => {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setProjects(prev => prev.filter(p => p.id !== id));
+      setSelectedProject(null);
+      toast({ title: "Project deleted" });
     }
   };
 
@@ -313,6 +324,7 @@ const AdminDashboard = () => {
             setNewMilestoneDesc={setNewMilestoneDesc}
             newMilestoneDue={newMilestoneDue}
             setNewMilestoneDue={setNewMilestoneDue}
+            onDeleteProject={deleteProject}
           />
         )}
       </div>
@@ -409,6 +421,11 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
   const [customDesc, setCustomDesc] = useState("");
   const [generatedContract, setGeneratedContract] = useState<GeneratedContract | null>(null);
 
+  // Inline editing state
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState({ title: "", scope_summary: "", terms_text: "", total_amount: 0, recurring_monthly: 0 });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const fetchContracts = useCallback(async () => {
     const { data } = await supabase.from("contracts").select("*").order("created_at", { ascending: false });
     setContracts((data as ContractRecord[]) || []);
@@ -430,6 +447,37 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
       setContracts((prev) => prev.map((c) => c.id === id ? { ...c, status } : c));
       toast({ title: `Contract marked as ${status}` });
     }
+  };
+
+  const startEditContract = (c: ContractRecord) => {
+    setEditingContractId(c.id);
+    setEditFields({ title: c.title, scope_summary: c.scope_summary, terms_text: c.terms_text, total_amount: c.total_amount, recurring_monthly: c.recurring_monthly });
+  };
+
+  const saveContractEdit = async () => {
+    if (!editingContractId) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("contracts").update({
+      title: editFields.title,
+      scope_summary: editFields.scope_summary,
+      terms_text: editFields.terms_text,
+      total_amount: editFields.total_amount,
+      recurring_monthly: editFields.recurring_monthly,
+      updated_at: new Date().toISOString(),
+    } as any).eq("id", editingContractId);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    else {
+      setContracts((prev) => prev.map(c => c.id === editingContractId ? { ...c, ...editFields } : c));
+      setEditingContractId(null);
+      toast({ title: "Contract updated!" });
+    }
+    setSavingEdit(false);
+  };
+
+  const deleteContract = async (id: string) => {
+    const { error } = await supabase.from("contracts").delete().eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    else { setContracts(prev => prev.filter(c => c.id !== id)); toast({ title: "Contract deleted" }); }
   };
 
   const downloadContractPdf = useCallback((contract: ContractRecord) => {
@@ -729,44 +777,84 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
         </div>
       ) : (
         <div className="grid gap-4">
-          {contracts.map((contract) => (
-            <Card key={contract.id} className="glass-card neon-border">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">{contract.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      #{contract.contract_number} · {profiles[contract.client_id]?.full_name || "Unknown"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{contract.scope_summary}</p>
-                  </div>
-                  <Badge className={contractStatusColors[contract.status]}>{contract.status}</Badge>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
-                  <span className="font-display font-semibold text-foreground">${contract.total_amount.toLocaleString()}</span>
-                  {contract.recurring_monthly > 0 && (
-                    <span className="text-accent">+ ${contract.recurring_monthly.toLocaleString()}/mo</span>
+          {contracts.map((contract) => {
+            const isEditing = editingContractId === contract.id;
+            return (
+              <Card key={contract.id} className="glass-card neon-border">
+                <CardContent className="p-6">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Title</label>
+                        <Input value={editFields.title} onChange={e => setEditFields({ ...editFields, title: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Scope Summary</label>
+                        <Textarea value={editFields.scope_summary} onChange={e => setEditFields({ ...editFields, scope_summary: e.target.value })} rows={3} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Total Amount</label>
+                          <Input type="number" value={editFields.total_amount} onChange={e => setEditFields({ ...editFields, total_amount: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Monthly Recurring</label>
+                          <Input type="number" value={editFields.recurring_monthly} onChange={e => setEditFields({ ...editFields, recurring_monthly: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Terms Text</label>
+                        <Textarea value={editFields.terms_text} onChange={e => setEditFields({ ...editFields, terms_text: e.target.value })} rows={5} />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="ghost" onClick={() => setEditingContractId(null)} className="gap-1"><X className="h-3.5 w-3.5" /> Cancel</Button>
+                        <Button size="sm" onClick={saveContractEdit} disabled={savingEdit} className="gap-1">
+                          {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-display text-sm font-semibold text-foreground">{contract.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            #{contract.contract_number} · {profiles[contract.client_id]?.full_name || "Unknown"}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{contract.scope_summary}</p>
+                        </div>
+                        <Badge className={contractStatusColors[contract.status]}>{contract.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
+                        <span className="font-display font-semibold text-foreground">${contract.total_amount.toLocaleString()}</span>
+                        {contract.recurring_monthly > 0 && (
+                          <span className="text-accent">+ ${contract.recurring_monthly.toLocaleString()}/mo</span>
+                        )}
+                        <div className="flex-1" />
+                        <div className="flex gap-2">
+                          {contract.status === "draft" && (
+                            <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "sent")}>Mark Sent</Button>
+                          )}
+                          {contract.status === "sent" && (
+                            <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "signed")}>Mark Signed</Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => startEditContract(contract)}>
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => downloadContractPdf(contract)}>
+                            <Download className="h-3.5 w-3.5" /> PDF
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs gap-1 text-destructive hover:text-destructive" onClick={() => deleteContract(contract.id)}>
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </>
                   )}
-                  <div className="flex-1" />
-                  <div className="flex gap-2">
-                    {contract.status === "draft" && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "sent")}>
-                        Mark Sent
-                      </Button>
-                    )}
-                    {contract.status === "sent" && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "signed")}>
-                        Mark Signed
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => downloadContractPdf(contract)}>
-                      <Download className="h-3.5 w-3.5" /> PDF
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -794,6 +882,7 @@ interface ProjectDetailProps {
   setNewMilestoneDesc: (v: string) => void;
   newMilestoneDue: string;
   setNewMilestoneDue: (v: string) => void;
+  onDeleteProject: (id: string) => void;
 }
 
 const ProjectDetail = ({
@@ -801,7 +890,7 @@ const ProjectDetail = ({
   onSendMessage, onUpdateProject, onAddMilestone, onToggleMilestone,
   onDeleteMilestone, milestoneDialogOpen, setMilestoneDialogOpen,
   newMilestoneTitle, setNewMilestoneTitle, newMilestoneDesc, setNewMilestoneDesc,
-  newMilestoneDue, setNewMilestoneDue,
+  newMilestoneDue, setNewMilestoneDue, onDeleteProject,
 }: ProjectDetailProps) => (
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div className="lg:col-span-2 space-y-6">
@@ -845,6 +934,12 @@ const ProjectDetail = ({
               <label className="text-xs text-muted-foreground block mb-1">Timeline</label>
               <Input value={(project as any).estimated_timeline || ""} onChange={(e) => onUpdateProject("estimated_timeline" as any, e.target.value)} placeholder="e.g. 6-8 weeks" />
             </div>
+          </div>
+
+          <div className="border-t border-border pt-4 mt-4">
+            <Button variant="destructive" size="sm" className="gap-2" onClick={() => onDeleteProject(project.id)}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete Project
+            </Button>
           </div>
 
           {profiles[project.client_id] && (
