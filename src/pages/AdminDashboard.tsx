@@ -1,47 +1,31 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import {
-  LogOut, ArrowLeft, Send, Loader2, Users, FolderOpen,
-  MessageSquare, Clock, DollarSign, CheckCircle, Plus, Trash2, BarChart3
+  Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
+  FolderOpen, FileText, Receipt, Users
 } from "lucide-react";
 
-type ProjectStatus = "pending" | "quoted" | "accepted" | "in_progress" | "review" | "delivered" | "completed";
-type PaymentStatus = "unpaid" | "partial" | "paid";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AdminStats from "@/components/admin/AdminStats";
+import AdminProjectList from "@/components/admin/AdminProjectList";
+import AdminInvoices from "@/components/admin/AdminInvoices";
+import AdminClients from "@/components/admin/AdminClients";
+import type { Project, Profile, ProjectStatus, PaymentStatus } from "@/components/admin/AdminProjectList";
+import { statusColors, paymentColors } from "@/components/admin/AdminProjectList";
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  status: ProjectStatus;
-  payment_status: PaymentStatus;
-  quoted_amount: number;
-  paid_amount: number;
-  progress: number;
-  tech_stack: string[];
-  estimated_timeline: string;
-  created_at: string;
-  client_id: string;
-}
-
-interface Profile {
-  id: string;
-  full_name: string;
-  company_name: string | null;
-  phone: string | null;
-  avatar_url: string | null;
-}
+const PROJECT_STATUSES: ProjectStatus[] = ["pending", "quoted", "accepted", "in_progress", "review", "delivered", "completed"];
+const PAYMENT_STATUSES: PaymentStatus[] = ["unpaid", "partial", "paid"];
 
 interface Milestone {
   id: string;
@@ -61,37 +45,21 @@ interface Message {
   sender_id: string;
 }
 
-const PROJECT_STATUSES: ProjectStatus[] = ["pending", "quoted", "accepted", "in_progress", "review", "delivered", "completed"];
-const PAYMENT_STATUSES: PaymentStatus[] = ["unpaid", "partial", "paid"];
-
-const statusColors: Record<ProjectStatus, string> = {
-  pending: "bg-muted text-muted-foreground",
-  quoted: "bg-accent/20 text-accent",
-  accepted: "bg-primary/20 text-primary",
-  in_progress: "bg-primary/30 text-primary",
-  review: "bg-accent/30 text-accent",
-  delivered: "bg-primary/40 text-primary",
-  completed: "bg-primary text-primary-foreground",
-};
-
-const paymentColors: Record<PaymentStatus, string> = {
-  unpaid: "bg-destructive/20 text-destructive",
-  partial: "bg-accent/20 text-accent",
-  paid: "bg-primary/20 text-primary",
-};
-
 const AdminDashboard = () => {
   const { user, signOut, loading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [profiles, setProfiles] = useState<Record<string, Profile & { phone?: string | null }>>({});
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [activeTab, setActiveTab] = useState("projects");
+  const [invoiceCount, setInvoiceCount] = useState(0);
+  const [contractCount, setContractCount] = useState(0);
 
   // Milestone form
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
@@ -110,19 +78,30 @@ const AdminDashboard = () => {
     setProjects(projectList);
     setLoadingProjects(false);
 
-    // Fetch all client profiles
     const clientIds = [...new Set(projectList.map((p) => p.client_id))];
     if (clientIds.length > 0) {
       const { data: profileData } = await supabase.from("profiles").select("*").in("id", clientIds);
-      const profileMap: Record<string, Profile> = {};
+      const profileMap: Record<string, Profile & { phone?: string | null }> = {};
       (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
       setProfiles(profileMap);
     }
   }, []);
 
+  const fetchCounts = useCallback(async () => {
+    const [{ count: cCount }, { count: iCount }] = await Promise.all([
+      supabase.from("contracts").select("*", { count: "exact", head: true }),
+      supabase.from("invoices").select("*", { count: "exact", head: true }),
+    ]);
+    setContractCount(cCount || 0);
+    setInvoiceCount(iCount || 0);
+  }, []);
+
   useEffect(() => {
-    if (user && isAdmin) fetchProjects();
-  }, [user, isAdmin, fetchProjects]);
+    if (user && isAdmin) {
+      fetchProjects();
+      fetchCounts();
+    }
+  }, [user, isAdmin, fetchProjects, fetchCounts]);
 
   useEffect(() => {
     if (selectedProject) {
@@ -225,289 +204,399 @@ const AdminDashboard = () => {
     revenue: projects.reduce((sum, p) => sum + (p.paid_amount || 0), 0),
   };
 
+  const projectSummaries = Object.keys(profiles).map((clientId) => ({
+    client_id: clientId,
+    count: projects.filter((p) => p.client_id === clientId).length,
+    totalPaid: projects.filter((p) => p.client_id === clientId).reduce((sum, p) => sum + (p.paid_amount || 0), 0),
+  }));
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {selectedProject ? (
-              <Button variant="ghost" size="icon" onClick={() => setSelectedProject(null)}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button></Link>
-            )}
-            <div>
-              <h1 className="font-display text-lg font-bold text-foreground">
-                {selectedProject ? selectedProject.title : "Admin Dashboard"}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {selectedProject
-                  ? `Client: ${profiles[selectedProject.client_id]?.full_name || "Unknown"}`
-                  : "Manage all client projects"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link to="/contracts">
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground font-display">
-                Contracts
-              </Button>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
-              <LogOut className="h-4 w-4" /> Sign Out
-            </Button>
-          </div>
-        </div>
-      </div>
+      <AdminHeader
+        title={selectedProject ? selectedProject.title : "Admin Dashboard"}
+        subtitle={selectedProject
+          ? `Client: ${profiles[selectedProject.client_id]?.full_name || "Unknown"}`
+          : "Manage all projects, contracts, invoices & clients"}
+        onSignOut={signOut}
+        onBack={selectedProject ? () => setSelectedProject(null) : undefined}
+      />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {!selectedProject ? (
           <>
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {[
-                { label: "Total Projects", value: stats.total, icon: FolderOpen },
-                { label: "Active", value: stats.active, icon: BarChart3 },
-                { label: "Pending", value: stats.pending, icon: Clock },
-                { label: "Revenue", value: `$${stats.revenue.toLocaleString()}`, icon: DollarSign },
-              ].map((stat) => (
-                <Card key={stat.label} className="glass-card neon-border">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <stat.icon className="h-8 w-8 text-primary/60" />
-                    <div>
-                      <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <AdminStats
+              projectCount={stats.total}
+              activeCount={stats.active}
+              pendingCount={stats.pending}
+              revenue={stats.revenue}
+              contractCount={contractCount}
+              invoiceCount={invoiceCount}
+            />
 
-            {/* Project List */}
-            {loadingProjects ? (
-              <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
-            ) : projects.length === 0 ? (
-              <div className="text-center py-16">
-                <FolderOpen className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground font-display">No projects yet</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {projects.map((project, i) => (
-                  <motion.div key={project.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                    <Card className="glass-card neon-border neon-border-hover cursor-pointer transition-all" onClick={() => setSelectedProject(project)}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="font-display text-base font-semibold text-foreground">{project.title}</h3>
-                            <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" />
-                              {profiles[project.client_id]?.full_name || "Unknown Client"}
-                              {profiles[project.client_id]?.company_name && ` — ${profiles[project.client_id].company_name}`}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{project.description}</p>
-                          </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <Badge className={statusColors[project.status]}>{project.status.replace("_", " ")}</Badge>
-                            <Badge className={paymentColors[project.payment_status]}>{project.payment_status}</Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                          {project.quoted_amount > 0 && (
-                            <span className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />${project.quoted_amount.toLocaleString()}</span>
-                          )}
-                          <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{new Date(project.created_at).toLocaleDateString()}</span>
-                          <div className="flex-1" />
-                          <div className="flex items-center gap-2 w-32">
-                            <Progress value={project.progress} className="h-2" />
-                            <span className="text-xs">{project.progress}%</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-6">
+                <TabsTrigger value="projects" className="gap-2 font-display text-xs">
+                  <FolderOpen className="h-3.5 w-3.5" /> Projects
+                </TabsTrigger>
+                <TabsTrigger value="contracts" className="gap-2 font-display text-xs">
+                  <FileText className="h-3.5 w-3.5" /> Contracts
+                </TabsTrigger>
+                <TabsTrigger value="invoices" className="gap-2 font-display text-xs">
+                  <Receipt className="h-3.5 w-3.5" /> Invoices
+                </TabsTrigger>
+                <TabsTrigger value="clients" className="gap-2 font-display text-xs">
+                  <Users className="h-3.5 w-3.5" /> Clients
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="projects">
+                <AdminProjectList
+                  projects={projects}
+                  profiles={profiles}
+                  loading={loadingProjects}
+                  onSelectProject={setSelectedProject}
+                />
+              </TabsContent>
+
+              <TabsContent value="contracts">
+                <ContractsInline profiles={profiles} />
+              </TabsContent>
+
+              <TabsContent value="invoices">
+                <AdminInvoices profiles={profiles} />
+              </TabsContent>
+
+              <TabsContent value="clients">
+                <AdminClients
+                  profiles={profiles}
+                  projectSummaries={projectSummaries}
+                  loading={loadingProjects}
+                />
+              </TabsContent>
+            </Tabs>
           </>
         ) : (
           /* Project Detail View */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Overview + Editable Fields */}
-              <Card className="glass-card neon-border">
-                <CardHeader><CardTitle className="font-display text-base">Project Management</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground text-sm">{selectedProject.description}</p>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Status</label>
-                      <Select value={selectedProject.status} onValueChange={(v) => updateProject("status", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PROJECT_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Payment Status</label>
-                      <Select value={selectedProject.payment_status} onValueChange={(v) => updateProject("payment_status", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Progress</label>
-                      <Input
-                        type="number" min={0} max={100}
-                        value={selectedProject.progress}
-                        onChange={(e) => updateProject("progress", parseInt(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Quoted Amount ($)</label>
-                      <Input
-                        type="number" min={0}
-                        value={selectedProject.quoted_amount}
-                        onChange={(e) => updateProject("quoted_amount", parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Paid Amount ($)</label>
-                      <Input
-                        type="number" min={0}
-                        value={selectedProject.paid_amount}
-                        onChange={(e) => updateProject("paid_amount", parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Timeline</label>
-                      <Input
-                        value={selectedProject.estimated_timeline}
-                        onChange={(e) => updateProject("estimated_timeline", e.target.value)}
-                        placeholder="e.g. 6-8 weeks"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Client Info */}
-                  {profiles[selectedProject.client_id] && (
-                    <div className="border-t border-border pt-4 mt-4">
-                      <p className="text-xs text-muted-foreground mb-2">Client Information</p>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs">Name</p>
-                          <p className="text-foreground font-medium">{profiles[selectedProject.client_id].full_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Company</p>
-                          <p className="text-foreground">{profiles[selectedProject.client_id].company_name || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Phone</p>
-                          <p className="text-foreground">{profiles[selectedProject.client_id].phone || "—"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Milestones */}
-              <Card className="glass-card neon-border">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="font-display text-base">Milestones</CardTitle>
-                  <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="gap-1 text-xs font-display">
-                        <Plus className="h-3.5 w-3.5" /> Add
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader><DialogTitle className="font-display">Add Milestone</DialogTitle></DialogHeader>
-                      <div className="space-y-3 mt-4">
-                        <Input placeholder="Milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} />
-                        <Textarea placeholder="Description (optional)" value={newMilestoneDesc} onChange={(e) => setNewMilestoneDesc(e.target.value)} />
-                        <Input type="date" value={newMilestoneDue} onChange={(e) => setNewMilestoneDue(e.target.value)} />
-                        <Button onClick={addMilestone} className="w-full font-display text-sm">Add Milestone</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </CardHeader>
-                <CardContent>
-                  {milestones.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No milestones yet. Add the first one above.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {milestones.map((m) => (
-                        <div key={m.id} className="flex items-center gap-3 group">
-                          <button onClick={() => toggleMilestone(m)} className="flex-shrink-0">
-                            <CheckCircle className={`h-5 w-5 transition-colors ${m.is_completed ? "text-primary" : "text-border hover:text-muted-foreground"}`} />
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${m.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{m.title}</p>
-                            {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
-                          </div>
-                          {m.due_date && <span className="text-xs text-muted-foreground flex-shrink-0">{new Date(m.due_date).toLocaleDateString()}</span>}
-                          <button onClick={() => deleteMilestone(m.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive/60 hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Messages sidebar */}
-            <Card className="glass-card neon-border lg:sticky lg:top-20 h-fit">
-              <CardHeader>
-                <CardTitle className="font-display text-base flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] overflow-y-auto space-y-3 mb-4 pr-2">
-                  {messages.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No messages yet.</p>
-                  ) : (
-                    messages.map((m) => (
-                      <div key={m.id} className={`flex ${m.is_from_client ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${m.is_from_client ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
-                          <p className="text-[10px] opacity-60 mb-0.5">{m.is_from_client ? "Client" : "You"}</p>
-                          {m.content}
-                          <p className="text-[10px] opacity-60 mt-1">{new Date(m.created_at).toLocaleTimeString()}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Reply to client..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  />
-                  <Button size="icon" onClick={sendMessage}><Send className="h-4 w-4" /></Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ProjectDetail
+            project={selectedProject}
+            profiles={profiles}
+            milestones={milestones}
+            messages={messages}
+            newMessage={newMessage}
+            setNewMessage={setNewMessage}
+            onSendMessage={sendMessage}
+            onUpdateProject={updateProject}
+            onAddMilestone={addMilestone}
+            onToggleMilestone={toggleMilestone}
+            onDeleteMilestone={deleteMilestone}
+            milestoneDialogOpen={milestoneDialogOpen}
+            setMilestoneDialogOpen={setMilestoneDialogOpen}
+            newMilestoneTitle={newMilestoneTitle}
+            setNewMilestoneTitle={setNewMilestoneTitle}
+            newMilestoneDesc={newMilestoneDesc}
+            setNewMilestoneDesc={setNewMilestoneDesc}
+            newMilestoneDue={newMilestoneDue}
+            setNewMilestoneDue={setNewMilestoneDue}
+          />
         )}
       </div>
     </div>
   );
 };
+
+/* ─── Inline Contracts Tab ─── */
+import jsPDF from "jspdf";
+
+interface ContractsInlineProps {
+  profiles: Record<string, Profile>;
+}
+
+interface ContractRecord {
+  id: string;
+  contract_number: string;
+  title: string;
+  scope_summary: string;
+  fee_breakdown: any;
+  total_amount: number;
+  recurring_monthly: number;
+  terms_text: string;
+  status: string;
+  created_at: string;
+  project_id: string | null;
+  client_id: string;
+}
+
+const contractStatusColors: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  sent: "bg-accent/20 text-accent",
+  signed: "bg-primary/20 text-primary",
+  expired: "bg-destructive/20 text-destructive",
+};
+
+const ContractsInline = ({ profiles }: ContractsInlineProps) => {
+  const { toast } = useToast();
+  const [contracts, setContracts] = useState<ContractRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("contracts").select("*").order("created_at", { ascending: false }).then(({ data }) => {
+      setContracts((data as ContractRecord[]) || []);
+      setLoading(false);
+    });
+  }, []);
+
+  const updateStatus = async (id: string, status: string) => {
+    const updateData: Record<string, any> = { status };
+    if (status === "signed") updateData.signed_at = new Date().toISOString();
+    const { error } = await supabase.from("contracts").update(updateData as any).eq("id", id);
+    if (!error) {
+      setContracts((prev) => prev.map((c) => c.id === id ? { ...c, status } : c));
+      toast({ title: `Contract marked as ${status}` });
+    }
+  };
+
+  if (loading) return <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-base font-semibold text-foreground">All Contracts</h2>
+        <a href="/#/contracts">
+          <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase">
+            <Plus className="h-4 w-4" /> Generate Contract
+          </Button>
+        </a>
+      </div>
+
+      {contracts.length === 0 ? (
+        <div className="text-center py-16">
+          <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="text-muted-foreground font-display">No contracts yet</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {contracts.map((contract, i) => (
+            <Card key={contract.id} className="glass-card neon-border">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-display text-sm font-semibold text-foreground">{contract.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      #{contract.contract_number} · {profiles[contract.client_id]?.full_name || "Unknown"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{contract.scope_summary}</p>
+                  </div>
+                  <Badge className={contractStatusColors[contract.status]}>{contract.status}</Badge>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
+                  <span className="font-display font-semibold text-foreground">${contract.total_amount.toLocaleString()}</span>
+                  {contract.recurring_monthly > 0 && (
+                    <span className="text-accent">+ ${contract.recurring_monthly.toLocaleString()}/mo</span>
+                  )}
+                  <div className="flex-1" />
+                  <div className="flex gap-2">
+                    {contract.status === "draft" && (
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "sent")}>
+                        Mark Sent
+                      </Button>
+                    )}
+                    {contract.status === "sent" && (
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(contract.id, "signed")}>
+                        Mark Signed
+                      </Button>
+                    )}
+                    <a href="/#/contracts">
+                      <Button size="sm" variant="ghost" className="text-xs">View Full</Button>
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Project Detail (extracted) ─── */
+interface ProjectDetailProps {
+  project: Project;
+  profiles: Record<string, Profile>;
+  milestones: Milestone[];
+  messages: Message[];
+  newMessage: string;
+  setNewMessage: (v: string) => void;
+  onSendMessage: () => void;
+  onUpdateProject: (field: keyof Project, value: any) => void;
+  onAddMilestone: () => void;
+  onToggleMilestone: (m: Milestone) => void;
+  onDeleteMilestone: (id: string) => void;
+  milestoneDialogOpen: boolean;
+  setMilestoneDialogOpen: (v: boolean) => void;
+  newMilestoneTitle: string;
+  setNewMilestoneTitle: (v: string) => void;
+  newMilestoneDesc: string;
+  setNewMilestoneDesc: (v: string) => void;
+  newMilestoneDue: string;
+  setNewMilestoneDue: (v: string) => void;
+}
+
+const ProjectDetail = ({
+  project, profiles, milestones, messages, newMessage, setNewMessage,
+  onSendMessage, onUpdateProject, onAddMilestone, onToggleMilestone,
+  onDeleteMilestone, milestoneDialogOpen, setMilestoneDialogOpen,
+  newMilestoneTitle, setNewMilestoneTitle, newMilestoneDesc, setNewMilestoneDesc,
+  newMilestoneDue, setNewMilestoneDue,
+}: ProjectDetailProps) => (
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="lg:col-span-2 space-y-6">
+      {/* Management Card */}
+      <Card className="glass-card neon-border">
+        <CardHeader><CardTitle className="font-display text-base">Project Management</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground text-sm">{project.description}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Status</label>
+              <Select value={project.status} onValueChange={(v) => onUpdateProject("status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PROJECT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Payment Status</label>
+              <Select value={project.payment_status} onValueChange={(v) => onUpdateProject("payment_status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Progress</label>
+              <Input type="number" min={0} max={100} value={project.progress} onChange={(e) => onUpdateProject("progress", parseInt(e.target.value) || 0)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Quoted ($)</label>
+              <Input type="number" min={0} value={project.quoted_amount} onChange={(e) => onUpdateProject("quoted_amount", parseFloat(e.target.value) || 0)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Paid ($)</label>
+              <Input type="number" min={0} value={project.paid_amount} onChange={(e) => onUpdateProject("paid_amount", parseFloat(e.target.value) || 0)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Timeline</label>
+              <Input value={(project as any).estimated_timeline || ""} onChange={(e) => onUpdateProject("estimated_timeline" as any, e.target.value)} placeholder="e.g. 6-8 weeks" />
+            </div>
+          </div>
+
+          {profiles[project.client_id] && (
+            <div className="border-t border-border pt-4 mt-4">
+              <p className="text-xs text-muted-foreground mb-2">Client Information</p>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Name</p>
+                  <p className="text-foreground font-medium">{profiles[project.client_id].full_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Company</p>
+                  <p className="text-foreground">{profiles[project.client_id].company_name || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Phone</p>
+                  <p className="text-foreground">{(profiles[project.client_id] as any).phone || "—"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Milestones */}
+      <Card className="glass-card neon-border">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="font-display text-base">Milestones</CardTitle>
+          <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-1 text-xs font-display">
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle className="font-display">Add Milestone</DialogTitle></DialogHeader>
+              <div className="space-y-3 mt-4">
+                <Input placeholder="Milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} />
+                <Textarea placeholder="Description (optional)" value={newMilestoneDesc} onChange={(e) => setNewMilestoneDesc(e.target.value)} />
+                <Input type="date" value={newMilestoneDue} onChange={(e) => setNewMilestoneDue(e.target.value)} />
+                <Button onClick={onAddMilestone} className="w-full font-display text-sm">Add Milestone</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {milestones.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No milestones yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {milestones.map((m) => (
+                <div key={m.id} className="flex items-center gap-3 group">
+                  <button onClick={() => onToggleMilestone(m)} className="flex-shrink-0">
+                    <CheckCircle className={`h-5 w-5 transition-colors ${m.is_completed ? "text-primary" : "text-border hover:text-muted-foreground"}`} />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${m.is_completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{m.title}</p>
+                    {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
+                  </div>
+                  {m.due_date && <span className="text-xs text-muted-foreground flex-shrink-0">{new Date(m.due_date).toLocaleDateString()}</span>}
+                  <button onClick={() => onDeleteMilestone(m.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive/60 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* Messages sidebar */}
+    <Card className="glass-card neon-border lg:sticky lg:top-20 h-fit">
+      <CardHeader>
+        <CardTitle className="font-display text-base flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" /> Messages
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[400px] overflow-y-auto space-y-3 mb-4 pr-2">
+          {messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No messages yet.</p>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} className={`flex ${m.is_from_client ? "justify-start" : "justify-end"}`}>
+                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${m.is_from_client ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
+                  <p className="text-[10px] opacity-60 mb-0.5">{m.is_from_client ? "Client" : "You"}</p>
+                  {m.content}
+                  <p className="text-[10px] opacity-60 mt-1">{new Date(m.created_at).toLocaleTimeString()}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Reply to client..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSendMessage()}
+          />
+          <Button size="icon" onClick={onSendMessage}><Send className="h-4 w-4" /></Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 export default AdminDashboard;
