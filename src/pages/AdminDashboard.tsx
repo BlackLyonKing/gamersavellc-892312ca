@@ -324,6 +324,7 @@ const AdminDashboard = () => {
             setNewMilestoneDesc={setNewMilestoneDesc}
             newMilestoneDue={newMilestoneDue}
             setNewMilestoneDue={setNewMilestoneDue}
+            onDeleteProject={deleteProject}
           />
         )}
       </div>
