@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import {
-  Loader2, Plus, Trash2, DollarSign, Building, Users, CheckCircle, PieChart,
+  Loader2, Plus, Trash2, DollarSign, Building, Users, CheckCircle, PieChart, Pencil, Save, X,
 } from "lucide-react";
 import type { Profile } from "./AdminProjectList";
 
@@ -52,6 +52,13 @@ const AdminPaymentSplits = ({ profiles }: AdminPaymentSplitsProps) => {
   const [recipientId, setRecipientId] = useState("");
   const [percentage, setPercentage] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPercentage, setEditPercentage] = useState("");
+  const [editRecipientType, setEditRecipientType] = useState<"company" | "admin">("company");
+  const [editRecipientId, setEditRecipientId] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -136,6 +143,47 @@ const AdminPaymentSplits = ({ profiles }: AdminPaymentSplitsProps) => {
     if (split.recipient_type === "company") return "Gamers Ave LLC (Company)";
     const profile = Object.values(profiles).find((p) => p.id === split.recipient_id);
     return profile?.full_name || "Unknown Admin";
+  };
+
+  const startEdit = (split: PaymentSplit) => {
+    setEditingId(split.id);
+    setEditPercentage(String(split.percentage));
+    setEditRecipientType(split.recipient_type);
+    setEditRecipientId(split.recipient_id || "");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !selectedContract) return;
+    const pct = parseFloat(editPercentage);
+    if (pct <= 0 || pct > 100) {
+      toast({ title: "Percentage must be between 0 and 100", variant: "destructive" });
+      return;
+    }
+    const otherTotal = contractSplits.filter((s) => s.id !== editingId).reduce((sum, s) => sum + s.percentage, 0);
+    if (otherTotal + pct > 100) {
+      toast({ title: `Only ${(100 - otherTotal).toFixed(1)}% available`, variant: "destructive" });
+      return;
+    }
+    if (editRecipientType === "admin" && !editRecipientId) {
+      toast({ title: "Please select an admin", variant: "destructive" });
+      return;
+    }
+    setSavingEdit(true);
+    const amount = (selectedContract.total_amount * pct) / 100;
+    const { error } = await supabase.from("payment_splits").update({
+      percentage: pct,
+      amount,
+      recipient_type: editRecipientType,
+      recipient_id: editRecipientType === "admin" ? editRecipientId : null,
+    } as any).eq("id", editingId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setSplits((prev) => prev.map((s) => s.id === editingId ? { ...s, percentage: pct, amount, recipient_type: editRecipientType, recipient_id: editRecipientType === "admin" ? editRecipientId : null } : s));
+      setEditingId(null);
+      toast({ title: "Split updated!" });
+    }
+    setSavingEdit(false);
   };
 
   if (loading) return <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>;
@@ -271,39 +319,85 @@ const AdminPaymentSplits = ({ profiles }: AdminPaymentSplitsProps) => {
                 <motion.div key={split.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
                   <Card className="glass-card neon-border">
                     <CardContent className="p-5">
-                      <div className="flex items-center gap-4">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${split.recipient_type === "company" ? "bg-primary/20" : "bg-accent/20"}`}>
-                          {split.recipient_type === "company"
-                            ? <Building className="h-5 w-5 text-primary" />
-                            : <Users className="h-5 w-5 text-accent" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-display text-sm font-semibold text-foreground">{getRecipientName(split)}</h3>
-                            {split.paid && <Badge className="bg-primary/20 text-primary text-[10px]">Paid</Badge>}
+                      {editingId === split.id ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Recipient Type</label>
+                            <Select value={editRecipientType} onValueChange={(v) => setEditRecipientType(v as "company" | "admin")}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="company">Company (Gamers Ave LLC)</SelectItem>
+                                <SelectItem value="admin">Admin Team Member</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {split.percentage}% — ${split.amount.toLocaleString()}
-                          </p>
-                          {split.paid_at && (
-                            <p className="text-xs text-muted-foreground">Paid {new Date(split.paid_at).toLocaleDateString()}</p>
+                          {editRecipientType === "admin" && (
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Admin</label>
+                              <Select value={editRecipientId} onValueChange={setEditRecipientId}>
+                                <SelectTrigger><SelectValue placeholder="Choose admin..." /></SelectTrigger>
+                                <SelectContent>
+                                  {adminUsers.map((a) => (
+                                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           )}
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Percentage</label>
+                            <Input type="number" min={0.1} max={100} step={0.1} value={editPercentage} onChange={(e) => setEditPercentage(e.target.value)} />
+                            {editPercentage && selectedContract && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                = ${((selectedContract.total_amount * parseFloat(editPercentage || "0")) / 100).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="gap-1 text-xs"><X className="h-3.5 w-3.5" /> Cancel</Button>
+                            <Button size="sm" onClick={saveEdit} disabled={savingEdit} className="gap-1 text-xs">
+                              {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          <Button
-                            size="sm"
-                            variant={split.paid ? "outline" : "default"}
-                            className="text-xs gap-1"
-                            onClick={() => togglePaid(split)}
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {split.paid ? "Unpay" : "Mark Paid"}
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-xs gap-1 text-destructive hover:text-destructive" onClick={() => deleteSplit(split.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${split.recipient_type === "company" ? "bg-primary/20" : "bg-accent/20"}`}>
+                            {split.recipient_type === "company"
+                              ? <Building className="h-5 w-5 text-primary" />
+                              : <Users className="h-5 w-5 text-accent" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-display text-sm font-semibold text-foreground">{getRecipientName(split)}</h3>
+                              {split.paid && <Badge className="bg-primary/20 text-primary text-[10px]">Paid</Badge>}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {split.percentage}% — ${split.amount.toLocaleString()}
+                            </p>
+                            {split.paid_at && (
+                              <p className="text-xs text-muted-foreground">Paid {new Date(split.paid_at).toLocaleDateString()}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={() => startEdit(split)}>
+                              <Pencil className="h-3.5 w-3.5" /> Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={split.paid ? "outline" : "default"}
+                              className="text-xs gap-1"
+                              onClick={() => togglePaid(split)}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {split.paid ? "Unpay" : "Mark Paid"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-xs gap-1 text-destructive hover:text-destructive" onClick={() => deleteSplit(split.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
