@@ -23,6 +23,7 @@ import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminClients from "@/components/admin/AdminClients";
 import AdminUserManagement from "@/components/admin/AdminUserManagement";
 import AdminPortfolio from "@/components/admin/AdminPortfolio";
+import AdminPaymentSplits from "@/components/admin/AdminPaymentSplits";
 import type { Project, Profile, ProjectStatus, PaymentStatus } from "@/components/admin/AdminProjectList";
 import { statusColors, paymentColors } from "@/components/admin/AdminProjectList";
 
