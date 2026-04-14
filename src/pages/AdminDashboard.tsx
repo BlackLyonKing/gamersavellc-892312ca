@@ -633,7 +633,7 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
     setSaving(true);
     const project = contractProjects.find((p) => p.id === selectedProjectId);
     const contractNumber = `GA-${Date.now().toString(36).toUpperCase()}`;
-    const { error } = await supabase.from("contracts").insert({
+    const { data: insertedContract, error } = await supabase.from("contracts").insert({
       project_id: project?.id || null,
       client_id: project?.client_id || user.id,
       contract_number: contractNumber,
@@ -644,10 +644,20 @@ const ContractsInline = ({ profiles }: ContractsInlineProps) => {
       recurring_monthly: generatedContract.totalMonthly,
       terms_text: generatedContract.fullContractText,
       status: "draft" as any,
-    });
+    }).select("id, total_amount").single();
     if (error) {
       toast({ title: "Error saving", description: error.message, variant: "destructive" });
     } else {
+      // Auto-create default company payment split (100%)
+      if (insertedContract) {
+        await supabase.from("payment_splits").insert({
+          contract_id: insertedContract.id,
+          recipient_type: "company",
+          recipient_id: null,
+          percentage: 100,
+          amount: insertedContract.total_amount,
+        } as any);
+      }
       toast({ title: "Contract saved!" });
       setGeneratedContract(null);
       setDialogOpen(false);
