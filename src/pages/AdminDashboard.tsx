@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X
+  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X, PieChart
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -23,6 +23,7 @@ import AdminInvoices from "@/components/admin/AdminInvoices";
 import AdminClients from "@/components/admin/AdminClients";
 import AdminUserManagement from "@/components/admin/AdminUserManagement";
 import AdminPortfolio from "@/components/admin/AdminPortfolio";
+import AdminPaymentSplits from "@/components/admin/AdminPaymentSplits";
 import type { Project, Profile, ProjectStatus, PaymentStatus } from "@/components/admin/AdminProjectList";
 import { statusColors, paymentColors } from "@/components/admin/AdminProjectList";
 
@@ -266,6 +267,9 @@ const AdminDashboard = () => {
                 <TabsTrigger value="portfolio" className="gap-2 font-display text-xs">
                   <Palette className="h-3.5 w-3.5" /> Portfolio
                 </TabsTrigger>
+                <TabsTrigger value="splits" className="gap-2 font-display text-xs">
+                  <PieChart className="h-3.5 w-3.5" /> Payment Splits
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="projects">
@@ -299,6 +303,10 @@ const AdminDashboard = () => {
 
               <TabsContent value="portfolio">
                 <AdminPortfolio />
+              </TabsContent>
+
+              <TabsContent value="splits">
+                <AdminPaymentSplits profiles={profiles} />
               </TabsContent>
             </Tabs>
           </>

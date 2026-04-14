@@ -186,6 +186,53 @@ export type Database = {
           },
         ]
       }
+      payment_splits: {
+        Row: {
+          amount: number
+          contract_id: string
+          created_at: string
+          id: string
+          paid: boolean
+          paid_at: string | null
+          percentage: number
+          recipient_id: string | null
+          recipient_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          contract_id: string
+          created_at?: string
+          id?: string
+          paid?: boolean
+          paid_at?: string | null
+          percentage?: number
+          recipient_id?: string | null
+          recipient_type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          contract_id?: string
+          created_at?: string
+          id?: string
+          paid?: boolean
+          paid_at?: string | null
+          percentage?: number
+          recipient_id?: string | null
+          recipient_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_splits_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_projects: {
         Row: {
           category: string
