@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import QuoteTool from "./pages/QuoteTool";
 import AdminDashboard from "./pages/AdminDashboard";
 import Contracts from "./pages/Contracts";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
