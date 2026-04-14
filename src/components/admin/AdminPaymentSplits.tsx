@@ -53,6 +53,13 @@ const AdminPaymentSplits = ({ profiles }: AdminPaymentSplitsProps) => {
   const [percentage, setPercentage] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPercentage, setEditPercentage] = useState("");
+  const [editRecipientType, setEditRecipientType] = useState<"company" | "admin">("company");
+  const [editRecipientId, setEditRecipientId] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [{ data: contractData }, { data: splitData }, { data: roles }, { data: profileData }] = await Promise.all([
