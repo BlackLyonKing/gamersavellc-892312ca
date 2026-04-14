@@ -267,6 +267,9 @@ const AdminDashboard = () => {
                 <TabsTrigger value="portfolio" className="gap-2 font-display text-xs">
                   <Palette className="h-3.5 w-3.5" /> Portfolio
                 </TabsTrigger>
+                <TabsTrigger value="splits" className="gap-2 font-display text-xs">
+                  <PieChart className="h-3.5 w-3.5" /> Payment Splits
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="projects">
