@@ -304,6 +304,10 @@ const AdminDashboard = () => {
               <TabsContent value="portfolio">
                 <AdminPortfolio />
               </TabsContent>
+
+              <TabsContent value="splits">
+                <AdminPaymentSplits profiles={profiles} />
+              </TabsContent>
             </Tabs>
           </>
         ) : (
