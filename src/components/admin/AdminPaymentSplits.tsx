@@ -145,6 +145,47 @@ const AdminPaymentSplits = ({ profiles }: AdminPaymentSplitsProps) => {
     return profile?.full_name || "Unknown Admin";
   };
 
+  const startEdit = (split: PaymentSplit) => {
+    setEditingId(split.id);
+    setEditPercentage(String(split.percentage));
+    setEditRecipientType(split.recipient_type);
+    setEditRecipientId(split.recipient_id || "");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !selectedContract) return;
+    const pct = parseFloat(editPercentage);
+    if (pct <= 0 || pct > 100) {
+      toast({ title: "Percentage must be between 0 and 100", variant: "destructive" });
+      return;
+    }
+    const otherTotal = contractSplits.filter((s) => s.id !== editingId).reduce((sum, s) => sum + s.percentage, 0);
+    if (otherTotal + pct > 100) {
+      toast({ title: `Only ${(100 - otherTotal).toFixed(1)}% available`, variant: "destructive" });
+      return;
+    }
+    if (editRecipientType === "admin" && !editRecipientId) {
+      toast({ title: "Please select an admin", variant: "destructive" });
+      return;
+    }
+    setSavingEdit(true);
+    const amount = (selectedContract.total_amount * pct) / 100;
+    const { error } = await supabase.from("payment_splits").update({
+      percentage: pct,
+      amount,
+      recipient_type: editRecipientType,
+      recipient_id: editRecipientType === "admin" ? editRecipientId : null,
+    } as any).eq("id", editingId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setSplits((prev) => prev.map((s) => s.id === editingId ? { ...s, percentage: pct, amount, recipient_type: editRecipientType, recipient_id: editRecipientType === "admin" ? editRecipientId : null } : s));
+      setEditingId(null);
+      toast({ title: "Split updated!" });
+    }
+    setSavingEdit(false);
+  };
+
   if (loading) return <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>;
 
   return (
