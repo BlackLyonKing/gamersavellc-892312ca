@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import {
-  Loader2, Plus, Trash2, DollarSign, Building, Users, CheckCircle, PieChart,
+  Loader2, Plus, Trash2, DollarSign, Building, Users, CheckCircle, PieChart, Pencil, Save, X,
 } from "lucide-react";
 import type { Profile } from "./AdminProjectList";
 
