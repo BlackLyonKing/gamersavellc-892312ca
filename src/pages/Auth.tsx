@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -18,6 +19,7 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
   const { signUp, signIn, user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,7 +34,14 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (forgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({ title: "Check your email", description: "We sent you a password reset link." });
+        setForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
         toast({ title: "Account created!", description: "Please check your email to verify your account." });
@@ -57,14 +66,20 @@ const Auth = () => {
         </div>
         <Card className="glass-card neon-border">
           <CardHeader className="text-center">
-            <CardTitle className="font-display text-2xl">{isSignUp ? "Create Account" : "Welcome Back"}</CardTitle>
+            <CardTitle className="font-display text-2xl">
+              {forgotPassword ? "Reset Password" : isSignUp ? "Create Account" : "Welcome Back"}
+            </CardTitle>
             <CardDescription>
-              {isSignUp ? "Start your project with Gamers Ave LLC" : "Sign in to your portal"}
+              {forgotPassword
+                ? "Enter your email and we'll send a reset link"
+                : isSignUp
+                ? "Start your project with Gamers Ave LLC"
+                : "Sign in to your portal"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+              {isSignUp && !forgotPassword && (
                 <>
                   <div>
                     <Label htmlFor="fullName">Full Name</Label>
@@ -84,22 +99,41 @@ const Auth = () => {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
               </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} />
-              </div>
+              {!forgotPassword && (
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" minLength={6} />
+                </div>
+              )}
               <Button type="submit" className="w-full font-display text-sm tracking-wider uppercase" disabled={loading || authLoading}>
-                {loading || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isSignUp ? "Create Account" : "Sign In"}
+                {loading || authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : forgotPassword ? "Send Reset Link" : isSignUp ? "Create Account" : "Sign In"}
               </Button>
             </form>
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Admin accounts automatically open the admin dashboard after sign in.
-            </p>
-            <div className="mt-4 text-center">
-              <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-primary hover:underline">
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-              </button>
-            </div>
+            {!isSignUp && !forgotPassword && (
+              <div className="mt-2 text-center">
+                <button type="button" onClick={() => setForgotPassword(true)} className="text-xs text-muted-foreground hover:text-primary hover:underline">
+                  Forgot your password?
+                </button>
+              </div>
+            )}
+            {forgotPassword ? (
+              <div className="mt-4 text-center">
+                <button type="button" onClick={() => setForgotPassword(false)} className="text-sm text-primary hover:underline">
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Admin accounts automatically open the admin dashboard after sign in.
+                </p>
+                <div className="mt-4 text-center">
+                  <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-primary hover:underline">
+                    {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+                  </button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </motion.div>

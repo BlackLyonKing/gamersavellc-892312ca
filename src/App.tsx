@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import QuoteTool from "./pages/QuoteTool";
 import AdminDashboard from "./pages/AdminDashboard";
 import Contracts from "./pages/Contracts";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/quote-tool" element={<QuoteTool />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/contracts" element={<Contracts />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
