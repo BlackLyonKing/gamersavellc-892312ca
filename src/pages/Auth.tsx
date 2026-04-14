@@ -18,6 +18,7 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
   const { signUp, signIn, user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,7 +33,14 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (forgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({ title: "Check your email", description: "We sent you a password reset link." });
+        setForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
         toast({ title: "Account created!", description: "Please check your email to verify your account." });
