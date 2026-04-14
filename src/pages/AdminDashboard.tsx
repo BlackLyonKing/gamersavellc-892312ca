@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X
+  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X, PieChart
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
