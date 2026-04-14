@@ -135,7 +135,6 @@ const Auth = () => {
               </>
             )}
           </CardContent>
-          </CardContent>
         </Card>
       </motion.div>
     </div>
