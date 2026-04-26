@@ -9,34 +9,30 @@ interface RoadmapProps {
   confirmedCallAt?: string | null;
 }
 
+type StepState = "done" | "current" | "pending";
+
 const OnboardingRoadmap = ({ status, confirmedCallAt }: RoadmapProps) => {
-  const steps = [
-    {
-      key: "account", icon: UserPlus, title: "Account created",
-      desc: "You're in.", state: "done" as const,
-    },
-    {
-      key: "intake", icon: FileText, title: "Intake submitted",
-      desc: "Your info is with our team.",
-      state: (status === "submitted" || status === "call_scheduled" || status === "completed") ? "done" : "current" as const,
-    },
+  const intakeState: StepState =
+    status === "submitted" || status === "call_scheduled" || status === "completed" ? "done" : "current";
+  const callState: StepState =
+    status === "completed" ? "done"
+      : status === "call_scheduled" ? "current"
+      : status === "submitted" ? "current"
+      : "pending";
+  const proposalState: StepState = status === "completed" ? "done" : "pending";
+
+  const steps: Array<{ key: string; icon: typeof CheckCircle2; title: string; desc: string; state: StepState }> = [
+    { key: "account", icon: UserPlus, title: "Account created", desc: "You're in.", state: "done" },
+    { key: "intake", icon: FileText, title: "Intake submitted", desc: "Your info is with our team.", state: intakeState },
     {
       key: "call", icon: CalendarCheck, title: "Discovery call",
       desc: confirmedCallAt
         ? `Confirmed for ${new Date(confirmedCallAt).toLocaleString()}`
         : status === "submitted" ? "We'll confirm a slot within 1 business day." : "Awaiting intake.",
-      state: status === "completed" ? "done" : status === "call_scheduled" ? "current" : status === "submitted" ? "current" : "pending" as const,
+      state: callState,
     },
-    {
-      key: "proposal", icon: FileText, title: "Proposal & contract",
-      desc: "Custom scope, pricing, and timeline.",
-      state: status === "completed" ? "done" : "pending" as const,
-    },
-    {
-      key: "kickoff", icon: Rocket, title: "Kickoff",
-      desc: "Your project goes live.",
-      state: "pending" as const,
-    },
+    { key: "proposal", icon: FileText, title: "Proposal & contract", desc: "Custom scope, pricing, and timeline.", state: proposalState },
+    { key: "kickoff", icon: Rocket, title: "Kickoff", desc: "Your project goes live.", state: "pending" },
   ];
 
   const statusStyles = (s: "done" | "current" | "pending") => {
