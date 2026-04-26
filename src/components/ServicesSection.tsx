@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, BrainCircuit, Network, Hexagon, MessageSquareText } from "lucide-react";
+import { Search, BrainCircuit, Network, Hexagon, MessageSquareText, Lightbulb } from "lucide-react";
 
 const services = [
   {
@@ -31,6 +31,12 @@ const services = [
     name: "AI Hives",
     description:
       "Persistent, self-organizing AI ecosystems that continuously learn, adapt, and optimize across your entire business infrastructure.",
+  },
+  {
+    icon: Lightbulb,
+    name: "AI Consulting",
+    description:
+      "Strategic AI integration consulting for small businesses. We assess your workflows, identify high-impact automation opportunities, and deliver a roadmap to deploy AI tools that cut costs and scale operations.",
   },
 ];
 
