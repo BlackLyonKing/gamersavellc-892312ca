@@ -58,18 +58,18 @@ const HeroSection = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.45, ease: "easeOut" }}
         >
-          <a
-            href="#projects"
+          <button
+            onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
             className="px-8 py-3 rounded-lg bg-primary text-primary-foreground font-display text-sm tracking-wider uppercase font-semibold hover:shadow-[0_0_30px_hsl(160_100%_45%/0.4)] transition-all duration-300"
           >
             View Projects
-          </a>
-          <a
-            href="#contact"
+          </button>
+          <button
+            onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
             className="px-8 py-3 rounded-lg neon-border text-foreground font-display text-sm tracking-wider uppercase font-semibold neon-border-hover transition-all duration-300"
           >
             Get In Touch
-          </a>
+          </button>
         </motion.div>
 
         {/* Stats */}
