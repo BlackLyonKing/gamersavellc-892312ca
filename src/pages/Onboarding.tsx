@@ -10,11 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Target, Sparkles, CalendarClock, ChevronLeft, ChevronRight,
-  Loader2, CheckCircle2, Plus, X
+  Loader2, CheckCircle2, Plus, X, CalendarIcon
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface OnboardingForm {
   // Step 1
@@ -62,7 +66,8 @@ const Onboarding = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
-  const [newSlot, setNewSlot] = useState("");
+  const [pickDate, setPickDate] = useState<Date | undefined>();
+  const [pickTime, setPickTime] = useState<string>("10:00");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -174,15 +179,25 @@ const Onboarding = () => {
   };
 
   const addSlot = () => {
-    const trimmed = newSlot.trim();
-    if (!trimmed) return;
-    if (form.preferred_slots.includes(trimmed)) return;
+    if (!pickDate) {
+      toast({ title: "Pick a date first", variant: "destructive" });
+      return;
+    }
+    const [hh, mm] = pickTime.split(":").map(Number);
+    const dt = new Date(pickDate);
+    dt.setHours(hh || 0, mm || 0, 0, 0);
+    if (dt.getTime() < Date.now()) {
+      toast({ title: "Pick a future time", variant: "destructive" });
+      return;
+    }
+    const iso = dt.toISOString();
+    if (form.preferred_slots.includes(iso)) return;
     if (form.preferred_slots.length >= 5) {
       toast({ title: "Max 5 slots", variant: "destructive" });
       return;
     }
-    setForm({ ...form, preferred_slots: [...form.preferred_slots, trimmed] });
-    setNewSlot("");
+    setForm({ ...form, preferred_slots: [...form.preferred_slots, iso] });
+    setPickDate(undefined);
   };
 
   const removeSlot = (s: string) =>
@@ -376,24 +391,45 @@ const Onboarding = () => {
                     <div>
                       <Label>Propose 2–5 time slots that work *</Label>
                       <p className="text-xs text-muted-foreground mb-2">
-                        e.g. "Tue Apr 30 · 2:00 PM" — our team will confirm one and email you.
+                        Pick a date and time — our team will confirm one slot.
                       </p>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn("flex-1 justify-start text-left font-normal", !pickDate && "text-muted-foreground")}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {pickDate ? format(pickDate, "EEE, MMM d, yyyy") : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={pickDate}
+                              onSelect={setPickDate}
+                              disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <Input
-                          maxLength={120}
-                          placeholder="e.g. Mon May 5 · 10:00 AM"
-                          value={newSlot}
-                          onChange={(e) => setNewSlot(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSlot(); } }}
+                          type="time"
+                          value={pickTime}
+                          onChange={(e) => setPickTime(e.target.value)}
+                          className="sm:w-32"
                         />
-                        <Button type="button" variant="secondary" onClick={addSlot}>
-                          <Plus className="h-4 w-4" />
+                        <Button type="button" variant="secondary" onClick={addSlot} className="gap-1">
+                          <Plus className="h-4 w-4" /> Add
                         </Button>
                       </div>
                       <div className="mt-3 space-y-2">
                         {form.preferred_slots.map((s) => (
                           <div key={s} className="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2 text-sm">
-                            <span>{s}</span>
+                            <span>{format(new Date(s), "EEE, MMM d, yyyy 'at' h:mm a")}</span>
                             <button onClick={() => removeSlot(s)} className="text-muted-foreground hover:text-destructive">
                               <X className="h-4 w-4" />
                             </button>

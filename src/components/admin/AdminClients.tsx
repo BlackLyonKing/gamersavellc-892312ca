@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "./AdminProjectList";
 
+const formatSlot = (s: string) => {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString(undefined, {
+    weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+};
+
 interface ProjectSummary {
   client_id: string;
   count: number;
@@ -159,7 +168,7 @@ const AdminClients = ({ profiles, projectSummaries, loading }: AdminClientsProps
                               const isConfirmed = ob.confirmed_call_at && new Date(slot).toISOString() === ob.confirmed_call_at;
                               return (
                                 <div key={slot} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1.5">
-                                  <span className="text-foreground">{slot}</span>
+                                  <span className="text-foreground">{formatSlot(slot)}</span>
                                   {isConfirmed ? (
                                     <Badge className="bg-primary/30 text-primary text-[10px]">Confirmed</Badge>
                                   ) : (
