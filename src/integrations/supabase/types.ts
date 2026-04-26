@@ -515,6 +515,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_emails: {
+        Args: never
+        Returns: {
+          email: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
