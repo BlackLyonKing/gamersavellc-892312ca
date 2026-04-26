@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_onboarding: {
+        Row: {
+          budget_range: string
+          client_id: string
+          company_name: string
+          confirmed_call_at: string | null
+          created_at: string
+          current_step: number
+          existing_tools: string
+          id: string
+          industry: string
+          package_interest: string
+          pain_points: string
+          preferred_slots: Json
+          primary_goal: string
+          project_summary: string
+          status: string
+          submitted_at: string | null
+          team_size: string
+          timeline: string
+          timezone: string
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          budget_range?: string
+          client_id: string
+          company_name?: string
+          confirmed_call_at?: string | null
+          created_at?: string
+          current_step?: number
+          existing_tools?: string
+          id?: string
+          industry?: string
+          package_interest?: string
+          pain_points?: string
+          preferred_slots?: Json
+          primary_goal?: string
+          project_summary?: string
+          status?: string
+          submitted_at?: string | null
+          team_size?: string
+          timeline?: string
+          timezone?: string
+          updated_at?: string
+          website?: string
+        }
+        Update: {
+          budget_range?: string
+          client_id?: string
+          company_name?: string
+          confirmed_call_at?: string | null
+          created_at?: string
+          current_step?: number
+          existing_tools?: string
+          id?: string
+          industry?: string
+          package_interest?: string
+          pain_points?: string
+          preferred_slots?: Json
+          primary_goal?: string
+          project_summary?: string
+          status?: string
+          submitted_at?: string | null
+          team_size?: string
+          timeline?: string
+          timezone?: string
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           client_id: string

@@ -16,6 +16,7 @@ import {
   Send, Loader2, FileText, Receipt, User, CheckCircle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import OnboardingRoadmap, { type OnboardingStatus } from "@/components/OnboardingRoadmap";
 
 type ProjectStatus = "pending" | "quoted" | "accepted" | "in_progress" | "review" | "delivered" | "completed";
 type PaymentStatus = "unpaid" | "partial" | "paid";
@@ -110,7 +111,7 @@ const invoiceStatusColors: Record<string, string> = {
 };
 
 const Dashboard = () => {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -138,6 +139,11 @@ const Dashboard = () => {
   const [profileForm, setProfileForm] = useState<ProfileData>({ full_name: "", company_name: null, phone: null });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Onboarding
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null);
+  const [confirmedCallAt, setConfirmedCallAt] = useState<string | null>(null);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
@@ -148,8 +154,30 @@ const Dashboard = () => {
       fetchContracts();
       fetchInvoices();
       fetchProfile();
+      fetchOnboarding();
     }
-  }, [user]);
+  }, [user, isAdmin]);
+
+  const fetchOnboarding = async () => {
+    if (!user || isAdmin) { setOnboardingChecked(true); return; }
+    const { data } = await supabase
+      .from("client_onboarding")
+      .select("status, confirmed_call_at")
+      .eq("client_id", user.id)
+      .maybeSingle();
+    if (!data) {
+      // Brand new client — send to onboarding
+      navigate("/onboarding");
+      return;
+    }
+    if (data.status === "in_progress") {
+      navigate("/onboarding");
+      return;
+    }
+    setOnboardingStatus(data.status as OnboardingStatus);
+    setConfirmedCallAt(data.confirmed_call_at);
+    setOnboardingChecked(true);
+  };
 
   useEffect(() => {
     if (selectedProject) {
@@ -314,6 +342,10 @@ const Dashboard = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {!selectedProject ? (
+          <>
+          {!isAdmin && onboardingStatus && onboardingStatus !== "completed" && (
+            <OnboardingRoadmap status={onboardingStatus} confirmedCallAt={confirmedCallAt} />
+          )}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="projects" className="gap-2 font-display text-xs">
@@ -516,6 +548,7 @@ const Dashboard = () => {
               </Card>
             </TabsContent>
           </Tabs>
+          </>
         ) : (
           /* Project Detail View */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

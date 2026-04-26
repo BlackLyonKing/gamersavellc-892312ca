@@ -11,6 +11,7 @@ import QuoteTool from "./pages/QuoteTool";
 import AdminDashboard from "./pages/AdminDashboard";
 import Contracts from "./pages/Contracts";
 import ResetPassword from "./pages/ResetPassword";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
