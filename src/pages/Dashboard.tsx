@@ -548,6 +548,7 @@ const Dashboard = () => {
               </Card>
             </TabsContent>
           </Tabs>
+          </>
         ) : (
           /* Project Detail View */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
