@@ -170,6 +170,32 @@ const Onboarding = () => {
     setSaving(true);
     try {
       await upsert({ current_step: TOTAL_STEPS, status: "submitted", submitted_at: new Date().toISOString() });
+      // Fire-and-forget admin notification (don't block UX on email failures)
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user!.id)
+          .maybeSingle();
+        await supabase.functions.invoke("notify-admins-onboarding", {
+          body: {
+            client_name: profile?.full_name || user!.email,
+            client_email: user!.email,
+            company_name: form.company_name,
+            industry: form.industry,
+            package_interest: form.package_interest,
+            budget_range: form.budget_range,
+            timeline: form.timeline,
+            primary_goal: form.primary_goal,
+            pain_points: form.pain_points,
+            project_summary: form.project_summary,
+            preferred_slots: form.preferred_slots,
+            timezone: form.timezone,
+          },
+        });
+      } catch (notifyErr) {
+        console.warn("Admin notification failed (non-blocking):", notifyErr);
+      }
       toast({ title: "Onboarding submitted!", description: "Our team will review and confirm your discovery call shortly." });
       navigate("/dashboard");
     } catch (e: unknown) {
