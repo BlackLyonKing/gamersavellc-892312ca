@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -21,9 +21,26 @@ const Contact = () => {
   const { toast } = useToast();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [website, setWebsite] = useState(""); // honeypot
+  const mountedAt = useRef<number>(Date.now());
+  const lastSubmitAt = useRef<number>(0);
+
+  useEffect(() => {
+    mountedAt.current = Date.now();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Client-side throttle: 30s between submissions
+    const now = Date.now();
+    if (now - lastSubmitAt.current < 30_000) {
+      toast({
+        title: "Please wait",
+        description: "You can send another message in a few seconds.",
+        variant: "destructive",
+      });
+      return;
+    }
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast({
@@ -36,9 +53,14 @@ const Contact = () => {
     setSubmitting(true);
     try {
       const { error } = await supabase.functions.invoke("send-contact-email", {
-        body: parsed.data,
+        body: {
+          ...parsed.data,
+          website, // honeypot — must be empty
+          elapsedMs: now - mountedAt.current,
+        },
       });
       if (error) throw error;
+      lastSubmitAt.current = now;
       toast({
         title: "Message sent",
         description: "Thanks - Gamers Ave support will get back to you shortly.",
@@ -90,6 +112,19 @@ const Contact = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="rounded-xl border border-primary/20 bg-card/60 backdrop-blur p-6 md:p-8 space-y-5 shadow-[0_0_40px_hsl(160_100%_45%/0.08)]"
         >
+          {/* Honeypot — hidden from users, attractive to bots */}
+          <div aria-hidden="true" className="absolute left-[-10000px] top-auto w-px h-px overflow-hidden">
+            <label htmlFor="website">Website</label>
+            <input
+              id="website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
