@@ -112,6 +112,19 @@ const Contact = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="rounded-xl border border-primary/20 bg-card/60 backdrop-blur p-6 md:p-8 space-y-5 shadow-[0_0_40px_hsl(160_100%_45%/0.08)]"
         >
+          {/* Honeypot — hidden from users, attractive to bots */}
+          <div aria-hidden="true" className="absolute left-[-10000px] top-auto w-px h-px overflow-hidden">
+            <label htmlFor="website">Website</label>
+            <input
+              id="website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
