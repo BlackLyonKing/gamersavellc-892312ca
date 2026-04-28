@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Expand } from "lucide-react";
 
 interface Project {
@@ -70,10 +69,8 @@ const ProjectCard = ({ project, index }: ProjectCardProps) => {
 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-6xl p-0 overflow-hidden bg-background/95 backdrop-blur border-primary/30">
-        <VisuallyHidden>
-          <DialogTitle>{project.name} screenshot</DialogTitle>
-          <DialogDescription>Full preview of the {project.name} homepage.</DialogDescription>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">{project.name} screenshot</DialogTitle>
+        <DialogDescription className="sr-only">Full preview of the {project.name} homepage.</DialogDescription>
         <div className="max-h-[85vh] overflow-y-auto">
           {project.screenshot && (
             <img
