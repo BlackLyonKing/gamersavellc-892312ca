@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -21,9 +21,26 @@ const Contact = () => {
   const { toast } = useToast();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [website, setWebsite] = useState(""); // honeypot
+  const mountedAt = useRef<number>(Date.now());
+  const lastSubmitAt = useRef<number>(0);
+
+  useEffect(() => {
+    mountedAt.current = Date.now();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Client-side throttle: 30s between submissions
+    const now = Date.now();
+    if (now - lastSubmitAt.current < 30_000) {
+      toast({
+        title: "Please wait",
+        description: "You can send another message in a few seconds.",
+        variant: "destructive",
+      });
+      return;
+    }
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast({
@@ -36,9 +53,14 @@ const Contact = () => {
     setSubmitting(true);
     try {
       const { error } = await supabase.functions.invoke("send-contact-email", {
-        body: parsed.data,
+        body: {
+          ...parsed.data,
+          website, // honeypot — must be empty
+          elapsedMs: now - mountedAt.current,
+        },
       });
       if (error) throw error;
+      lastSubmitAt.current = now;
       toast({
         title: "Message sent",
         description: "Thanks - Gamers Ave support will get back to you shortly.",
