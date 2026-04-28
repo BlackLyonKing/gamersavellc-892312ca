@@ -62,6 +62,22 @@ Deno.serve(async (req: Request) => {
     const name = String(body?.name ?? "").trim();
     const email = String(body?.email ?? "").trim();
     const message = String(body?.message ?? "").trim();
+    const honeypot = String(body?.website ?? "").trim();
+    const elapsedMs = Number(body?.elapsedMs ?? 0);
+
+    // Spam protection: silently accept (200) so bots don't retry, but don't send.
+    if (honeypot) {
+      console.log("Honeypot triggered, dropping submission");
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 2000) {
+      console.log(`Submission too fast (${elapsedMs}ms), dropping`);
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!name || name.length > 100) {
