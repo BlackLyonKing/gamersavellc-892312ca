@@ -1,0 +1,12 @@
+UPDATE public.portfolio_projects SET name = 'The Trading Swarm' WHERE id = '148f0a35-75e6-4762-8a51-708bb1e7ec40';
+UPDATE public.portfolio_projects SET name = 'Insurance App' WHERE id = '8e8d0c2e-8476-433a-88d9-78b69e2b115b';
+UPDATE public.portfolio_projects SET name = 'CryptoPOS Chain' WHERE id = '2f5f09ed-9993-4d85-9ee8-3b162208f9bc';
+UPDATE public.portfolio_projects SET name = 'Gamers Ave Compete' WHERE id = '2f07a746-7426-4799-85cb-2c5ce81d77f7';
+UPDATE public.portfolio_projects SET name = 'Lion King Apparel' WHERE id = '9e2a584a-1f89-4a96-93fa-3fe394a0e9b8';
+UPDATE public.portfolio_projects SET name = 'Soul Food Delivered' WHERE id = '1d688907-01e5-4cca-bdc2-d580e128f90f';
+UPDATE public.portfolio_projects SET name = 'Sovereign Casino App' WHERE id = '2c509dbc-8f2e-43b5-9f2f-5be560a77fde';
+UPDATE public.portfolio_projects SET name = 'Lake Elsinore Connect' WHERE id = '469c93ed-f6ff-4211-9d63-3fe18b62c5b6';
+UPDATE public.portfolio_projects SET name = 'pursued-luxury-solana' WHERE id = 'a301b515-bdfc-4a28-a553-409c24b2e601';
+UPDATE public.portfolio_projects SET name = 'Kim''s Limeade Site' WHERE id = '928d09fd-9241-4626-960a-362737360264';
+UPDATE public.portfolio_projects SET name = 'Flavors & Fizz Hub' WHERE id = 'a3a8d79c-b85a-426a-885f-31318322910c';
+UPDATE public.portfolio_projects SET name = 'Bright Fix' WHERE id = '35f94f70-1229-4fc2-9921-a8e8a4673c27';
