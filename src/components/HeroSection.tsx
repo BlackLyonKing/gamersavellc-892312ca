@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 import logo from "@/assets/logo.png";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
@@ -65,7 +67,7 @@ const HeroSection = () => {
             View Projects
           </button>
           <button
-            onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => navigate("/contact")}
             className="px-8 py-3 rounded-lg neon-border text-foreground font-display text-sm tracking-wider uppercase font-semibold neon-border-hover transition-all duration-300"
           >
             Get In Touch
