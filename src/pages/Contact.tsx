@@ -41,7 +41,7 @@ const Contact = () => {
       if (error) throw error;
       toast({
         title: "Message sent",
-        description: "Thanks — Robert and Brandon will get back to you shortly.",
+        description: "Thanks - Gamers Ave support will get back to you shortly.",
       });
       setForm({ name: "", email: "", message: "" });
     } catch (err) {
