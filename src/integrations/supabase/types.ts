@@ -510,6 +510,72 @@ export type Database = {
         }
         Relationships: []
       }
+      vapi_call_logs: {
+        Row: {
+          assistant_id: string | null
+          call_id: string | null
+          cost: number | null
+          created_at: string
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          ended_reason: string | null
+          from_number: string | null
+          id: string
+          initiated_by: string | null
+          metadata: Json | null
+          recording_url: string | null
+          started_at: string | null
+          status: string | null
+          summary: string | null
+          to_number: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          assistant_id?: string | null
+          call_id?: string | null
+          cost?: number | null
+          created_at?: string
+          direction: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          from_number?: string | null
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string | null
+          summary?: string | null
+          to_number?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assistant_id?: string | null
+          call_id?: string | null
+          cost?: number | null
+          created_at?: string
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          from_number?: string | null
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string | null
+          summary?: string | null
+          to_number?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
