@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Send, Plus, Trash2, CheckCircle, MessageSquare,
-  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X, PieChart
+  FolderOpen, FileText, Receipt, Users, Download, Shield, Palette, Pencil, Save, X, PieChart, Phone
 } from "lucide-react";
 
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -24,6 +24,7 @@ import AdminClients from "@/components/admin/AdminClients";
 import AdminUserManagement from "@/components/admin/AdminUserManagement";
 import AdminPortfolio from "@/components/admin/AdminPortfolio";
 import AdminPaymentSplits from "@/components/admin/AdminPaymentSplits";
+import AdminVapi from "@/components/admin/AdminVapi";
 import type { Project, Profile, ProjectStatus, PaymentStatus } from "@/components/admin/AdminProjectList";
 import { statusColors, paymentColors } from "@/components/admin/AdminProjectList";
 
@@ -270,6 +271,9 @@ const AdminDashboard = () => {
                 <TabsTrigger value="splits" className="gap-2 font-display text-xs">
                   <PieChart className="h-3.5 w-3.5" /> Payment Splits
                 </TabsTrigger>
+                <TabsTrigger value="vapi" className="gap-2 font-display text-xs">
+                  <Phone className="h-3.5 w-3.5" /> Voice AI
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="projects">
@@ -307,6 +311,10 @@ const AdminDashboard = () => {
 
               <TabsContent value="splits">
                 <AdminPaymentSplits profiles={profiles} />
+              </TabsContent>
+
+              <TabsContent value="vapi">
+                <AdminVapi />
               </TabsContent>
             </Tabs>
           </>
