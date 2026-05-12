@@ -11,11 +11,11 @@ const Footer = () => {
           <span className="text-muted-foreground text-sm">LLC</span>
         </div>
         <a
-          href="tel:9517990953"
+          href="tel:+19517990593"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm transition-colors"
         >
           <Phone className="w-4 h-4" />
-          (951) 799-0953
+          (951) 799-0593
         </a>
         <p className="text-muted-foreground text-sm">
           © {new Date().getFullYear()} Gamers Ave LLC. All rights reserved.
