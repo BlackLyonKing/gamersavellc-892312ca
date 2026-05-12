@@ -1,4 +1,5 @@
 import logo from "@/assets/logo.png";
+import { Phone } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -9,6 +10,13 @@ const Footer = () => {
           <span className="font-display text-lg font-bold gradient-text">GAMERS AVE</span>
           <span className="text-muted-foreground text-sm">LLC</span>
         </div>
+        <a
+          href="tel:9517990953"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary text-sm transition-colors"
+        >
+          <Phone className="w-4 h-4" />
+          (951) 799-0953
+        </a>
         <p className="text-muted-foreground text-sm">
           © {new Date().getFullYear()} Gamers Ave LLC. All rights reserved.
         </p>
