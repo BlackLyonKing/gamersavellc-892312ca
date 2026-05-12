@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import VapiWidget from "@/components/VapiWidget";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <VapiWidget />
         </HashRouter>
       </TooltipProvider>
     </AuthProvider>
