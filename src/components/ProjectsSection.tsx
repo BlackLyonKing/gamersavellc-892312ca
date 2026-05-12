@@ -57,20 +57,22 @@ const ProjectsSection = () => {
           <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>
         ) : (
           <>
-            <div className="flex flex-wrap justify-center gap-2 mb-12">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActive(cat)}
-                  className={`px-4 py-2 rounded-lg text-xs font-display tracking-wider uppercase transition-all duration-300 ${
-                    active === cat
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            <div className="w-full max-w-3xl mx-auto overflow-x-auto no-scrollbar mb-12">
+              <div className="flex items-center justify-start md:justify-center gap-2 pb-2 px-1">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActive(cat)}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[11px] font-display tracking-wider uppercase whitespace-nowrap transition-all duration-200 ${
+                      active === cat
+                        ? "bg-primary text-primary-foreground shadow-[0_0_20px_hsl(160_100%_45%/0.3)]"
+                        : "border border-border/60 bg-card/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
