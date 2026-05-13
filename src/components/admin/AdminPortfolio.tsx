@@ -108,7 +108,7 @@ const AdminPortfolio = () => {
           <DialogTrigger asChild>
             <Button onClick={openAdd} size="sm" className="gap-2"><Plus className="h-4 w-4" /> Add Project</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">{editingId ? "Edit" : "Add"} Portfolio Project</DialogTitle>
             </DialogHeader>
