@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, BrainCircuit, Network, Hexagon, MessageSquareText, Lightbulb } from "lucide-react";
+import { Search, BrainCircuit, Network, Hexagon, MessageSquareText, Lightbulb, Headphones } from "lucide-react";
 
 const services = [
   {
@@ -31,6 +31,12 @@ const services = [
     name: "AI Hives",
     description:
       "Persistent, self-organizing AI ecosystems that continuously learn, adapt, and optimize across your entire business infrastructure.",
+  },
+  {
+    icon: Headphones,
+    name: "Voice Concierge",
+    description:
+      "AI-powered voice concierge service that handles inbound calls, appointment booking, FAQ resolution, and warm handoffs — delivering 24/7 professional phone presence for your business.",
   },
   {
     icon: Lightbulb,
