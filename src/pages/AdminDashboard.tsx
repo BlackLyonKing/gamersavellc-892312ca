@@ -249,29 +249,29 @@ const AdminDashboard = () => {
             />
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-6">
-                <TabsTrigger value="projects" className="gap-2 font-display text-xs">
+              <TabsList className="mb-6 h-auto flex-wrap justify-start gap-1 p-1 w-full">
+                <TabsTrigger value="projects" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <FolderOpen className="h-3.5 w-3.5" /> Projects
                 </TabsTrigger>
-                <TabsTrigger value="contracts" className="gap-2 font-display text-xs">
+                <TabsTrigger value="contracts" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <FileText className="h-3.5 w-3.5" /> Contracts
                 </TabsTrigger>
-                <TabsTrigger value="invoices" className="gap-2 font-display text-xs">
+                <TabsTrigger value="invoices" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <Receipt className="h-3.5 w-3.5" /> Invoices
                 </TabsTrigger>
-                <TabsTrigger value="clients" className="gap-2 font-display text-xs">
+                <TabsTrigger value="clients" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <Users className="h-3.5 w-3.5" /> Clients
                 </TabsTrigger>
-                <TabsTrigger value="users" className="gap-2 font-display text-xs">
-                  <Shield className="h-3.5 w-3.5" /> User Management
+                <TabsTrigger value="users" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
+                  <Shield className="h-3.5 w-3.5" /> Users
                 </TabsTrigger>
-                <TabsTrigger value="portfolio" className="gap-2 font-display text-xs">
+                <TabsTrigger value="portfolio" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <Palette className="h-3.5 w-3.5" /> Portfolio
                 </TabsTrigger>
-                <TabsTrigger value="splits" className="gap-2 font-display text-xs">
-                  <PieChart className="h-3.5 w-3.5" /> Payment Splits
+                <TabsTrigger value="splits" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
+                  <PieChart className="h-3.5 w-3.5" /> Splits
                 </TabsTrigger>
-                <TabsTrigger value="vapi" className="gap-2 font-display text-xs">
+                <TabsTrigger value="vapi" className="gap-1.5 font-display text-[11px] px-2.5 py-1.5">
                   <Phone className="h-3.5 w-3.5" /> Voice AI
                 </TabsTrigger>
               </TabsList>
