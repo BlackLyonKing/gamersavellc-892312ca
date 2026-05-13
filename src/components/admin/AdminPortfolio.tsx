@@ -65,13 +65,27 @@ const AdminPortfolio = () => {
 
     if (editingId) {
       const { error } = await supabase.from("portfolio_projects").update(payload as any).eq("id", editingId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
-      else { toast({ title: "Project updated!" }); }
+      if (error) {
+        console.error("Portfolio update failed", error);
+        toast({ title: "Update failed", description: error.message, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      toast({ title: "Project updated!" });
     } else {
       const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.sort_order)) + 1 : 0;
-      const { error } = await supabase.from("portfolio_projects").insert({ ...payload, sort_order: maxOrder } as any);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
-      else { toast({ title: "Project added!" }); }
+      const { error } = await supabase
+        .from("portfolio_projects")
+        .insert({ ...payload, sort_order: maxOrder } as any)
+        .select()
+        .single();
+      if (error) {
+        console.error("Portfolio insert failed", error);
+        toast({ title: "Couldn't add project", description: error.message, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      toast({ title: "Project added!" });
     }
     setSaving(false);
     setDialogOpen(false);
@@ -94,7 +108,7 @@ const AdminPortfolio = () => {
           <DialogTrigger asChild>
             <Button onClick={openAdd} size="sm" className="gap-2"><Plus className="h-4 w-4" /> Add Project</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">{editingId ? "Edit" : "Add"} Portfolio Project</DialogTitle>
             </DialogHeader>
