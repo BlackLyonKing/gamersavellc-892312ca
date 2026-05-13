@@ -187,6 +187,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const addProject = async () => {
+    if (!newProject.client_id || !newProject.title.trim()) {
+      toast({ title: "Client and title are required", variant: "destructive" });
+      return;
+    }
+
+    setSavingProject(true);
+    const techStack = newProjectTech.split(",").map((item) => item.trim()).filter(Boolean);
+    const { data, error } = await supabase.from("projects").insert({
+      client_id: newProject.client_id,
+      title: newProject.title.trim(),
+      description: newProject.description.trim(),
+      status: newProject.status,
+      payment_status: newProject.payment_status,
+      quoted_amount: newProject.quoted_amount,
+      paid_amount: newProject.paid_amount,
+      progress: newProject.progress,
+      estimated_timeline: newProject.estimated_timeline.trim(),
+      tech_stack: techStack,
+    } as any).select("*").single();
+
+    if (error) {
+      toast({ title: "Couldn't add project", description: error.message, variant: "destructive" });
+    } else {
+      setProjects((prev) => [data as Project, ...prev]);
+      setNewProject(EMPTY_NEW_PROJECT);
+      setNewProjectTech("");
+      setProjectDialogOpen(false);
+      toast({ title: "Project added" });
+    }
+    setSavingProject(false);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedProject) return;
     const { error } = await supabase.from("project_messages").insert({
