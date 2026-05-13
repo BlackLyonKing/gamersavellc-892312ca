@@ -49,6 +49,30 @@ interface Message {
   sender_id: string;
 }
 
+interface NewProjectForm {
+  client_id: string;
+  title: string;
+  description: string;
+  status: ProjectStatus;
+  payment_status: PaymentStatus;
+  quoted_amount: number;
+  paid_amount: number;
+  progress: number;
+  estimated_timeline: string;
+}
+
+const EMPTY_NEW_PROJECT: NewProjectForm = {
+  client_id: "",
+  title: "",
+  description: "",
+  status: "pending",
+  payment_status: "unpaid",
+  quoted_amount: 0,
+  paid_amount: 0,
+  progress: 0,
+  estimated_timeline: "",
+};
+
 const AdminDashboard = () => {
   const { user, signOut, loading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -70,6 +94,10 @@ const AdminDashboard = () => {
   const [newMilestoneDesc, setNewMilestoneDesc] = useState("");
   const [newMilestoneDue, setNewMilestoneDue] = useState("");
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [newProject, setNewProject] = useState<NewProjectForm>(EMPTY_NEW_PROJECT);
+  const [newProjectTech, setNewProjectTech] = useState("");
+  const [savingProject, setSavingProject] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -77,18 +105,17 @@ const AdminDashboard = () => {
   }, [user, authLoading, isAdmin, navigate]);
 
   const fetchProjects = useCallback(async () => {
-    const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
+    const [{ data }, { data: profileData }] = await Promise.all([
+      supabase.from("projects").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("*").order("full_name"),
+    ]);
     const projectList = (data as Project[]) || [];
     setProjects(projectList);
     setLoadingProjects(false);
 
-    const clientIds = [...new Set(projectList.map((p) => p.client_id))];
-    if (clientIds.length > 0) {
-      const { data: profileData } = await supabase.from("profiles").select("*").in("id", clientIds);
-      const profileMap: Record<string, Profile & { phone?: string | null }> = {};
-      (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
-      setProfiles(profileMap);
-    }
+    const profileMap: Record<string, Profile & { phone?: string | null }> = {};
+    (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
+    setProfiles(profileMap);
   }, []);
 
   const fetchCounts = useCallback(async () => {
