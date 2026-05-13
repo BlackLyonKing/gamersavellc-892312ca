@@ -80,6 +80,7 @@ const AdminDashboard = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile & { phone?: string | null }>>({});
+  const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -105,9 +106,10 @@ const AdminDashboard = () => {
   }, [user, authLoading, isAdmin, navigate]);
 
   const fetchProjects = useCallback(async () => {
-    const [{ data }, { data: profileData }] = await Promise.all([
+    const [{ data }, { data: profileData }, { data: roleData }] = await Promise.all([
       supabase.from("projects").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").order("full_name"),
+      supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
     ]);
     const projectList = (data as Project[]) || [];
     setProjects(projectList);
@@ -116,6 +118,9 @@ const AdminDashboard = () => {
     const profileMap: Record<string, Profile & { phone?: string | null }> = {};
     (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
     setProfiles(profileMap);
+
+    const ids = new Set<string>((roleData || []).map((r: any) => r.user_id));
+    setAdminIds(ids);
   }, []);
 
   const fetchCounts = useCallback(async () => {
