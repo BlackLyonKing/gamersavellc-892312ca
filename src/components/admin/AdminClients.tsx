@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "./AdminProjectList";
 
@@ -26,6 +29,7 @@ interface AdminClientsProps {
   profiles: Record<string, Profile & { phone?: string | null; avatar_url?: string | null }>;
   projectSummaries: ProjectSummary[];
   loading: boolean;
+  onClientCreated?: () => void;
 }
 
 interface OnboardingRow {
@@ -50,10 +54,32 @@ interface OnboardingRow {
   confirmed_call_at: string | null;
 }
 
-const AdminClients = ({ profiles, projectSummaries, loading }: AdminClientsProps) => {
+const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: AdminClientsProps) => {
   const [onboarding, setOnboarding] = useState<Record<string, OnboardingRow>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ email: "", full_name: "", company_name: "", phone: "" });
+  const { toast } = useToast();
+
+  const submitNewClient = async () => {
+    if (!form.email.trim()) {
+      toast({ title: "Email required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-client", { body: form });
+    setSaving(false);
+    if (error || (data as any)?.error) {
+      toast({ title: "Error", description: error?.message || (data as any)?.error || "Failed", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Client added", description: "They'll receive a password setup email." });
+    setForm({ email: "", full_name: "", company_name: "", phone: "" });
+    setAddOpen(false);
+    onClientCreated?.();
+  };
 
   useEffect(() => {
     (async () => {
@@ -82,16 +108,63 @@ const AdminClients = ({ profiles, projectSummaries, loading }: AdminClientsProps
 
   const clients = Object.values(profiles);
 
+  const addClientDialog = (
+    <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase">
+          <UserPlus className="h-4 w-4" /> Add Client
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle className="font-display">Add New Client</DialogTitle></DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Email *</label>
+            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="client@example.com" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Full name</label>
+            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Jane Doe" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Company</label>
+            <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} placeholder="Acme Inc." />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 555 123 4567" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={submitNewClient} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              Create Client
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (clients.length === 0) return (
-    <div className="text-center py-16">
-      <Users className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-      <p className="text-muted-foreground font-display">No clients yet</p>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
+        {addClientDialog}
+      </div>
+      <div className="text-center py-16">
+        <Users className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+        <p className="text-muted-foreground font-display">No clients yet</p>
+      </div>
     </div>
   );
 
   return (
     <div>
-      <h2 className="font-display text-base font-semibold text-foreground mb-6">All Clients</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
+        {addClientDialog}
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         {clients.map((client, i) => {
           const summary = projectSummaries.find((s) => s.client_id === client.id);

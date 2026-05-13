@@ -80,6 +80,7 @@ const AdminDashboard = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile & { phone?: string | null }>>({});
+  const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -105,9 +106,10 @@ const AdminDashboard = () => {
   }, [user, authLoading, isAdmin, navigate]);
 
   const fetchProjects = useCallback(async () => {
-    const [{ data }, { data: profileData }] = await Promise.all([
+    const [{ data }, { data: profileData }, { data: roleData }] = await Promise.all([
       supabase.from("projects").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").order("full_name"),
+      supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
     ]);
     const projectList = (data as Project[]) || [];
     setProjects(projectList);
@@ -116,6 +118,9 @@ const AdminDashboard = () => {
     const profileMap: Record<string, Profile & { phone?: string | null }> = {};
     (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
     setProfiles(profileMap);
+
+    const ids = new Set<string>((roleData || []).map((r: any) => r.user_id));
+    setAdminIds(ids);
   }, []);
 
   const fetchCounts = useCallback(async () => {
@@ -279,7 +284,13 @@ const AdminDashboard = () => {
     revenue: projects.reduce((sum, p) => sum + (p.paid_amount || 0), 0),
   };
 
-  const projectSummaries = Object.keys(profiles).map((clientId) => ({
+  // Filter out admins so the "client" lists never include team members.
+  const clientProfiles: Record<string, Profile & { phone?: string | null }> = {};
+  Object.entries(profiles).forEach(([id, p]) => {
+    if (!adminIds.has(id)) clientProfiles[id] = p;
+  });
+
+  const projectSummaries = Object.keys(clientProfiles).map((clientId) => ({
     client_id: clientId,
     count: projects.filter((p) => p.client_id === clientId).length,
     totalPaid: projects.filter((p) => p.client_id === clientId).reduce((sum, p) => sum + (p.paid_amount || 0), 0),
@@ -355,7 +366,10 @@ const AdminDashboard = () => {
                           <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
                             <SelectTrigger><SelectValue placeholder="Select a client" /></SelectTrigger>
                             <SelectContent>
-                              {Object.values(profiles).map((profile) => (
+                              {Object.values(clientProfiles).length === 0 && (
+                                <div className="px-2 py-3 text-xs text-muted-foreground">No clients yet — add one from the Clients tab.</div>
+                              )}
+                              {Object.values(clientProfiles).map((profile) => (
                                 <SelectItem key={profile.id} value={profile.id}>
                                   {profile.full_name || "Unnamed client"}{profile.company_name ? ` — ${profile.company_name}` : ""}
                                 </SelectItem>
@@ -425,18 +439,19 @@ const AdminDashboard = () => {
               </TabsContent>
 
               <TabsContent value="contracts">
-                <ContractsInline profiles={profiles} />
+                <ContractsInline profiles={clientProfiles} />
               </TabsContent>
 
               <TabsContent value="invoices">
-                <AdminInvoices profiles={profiles} />
+                <AdminInvoices profiles={clientProfiles} />
               </TabsContent>
 
               <TabsContent value="clients">
                 <AdminClients
-                  profiles={profiles}
+                  profiles={clientProfiles}
                   projectSummaries={projectSummaries}
                   loading={loadingProjects}
+                  onClientCreated={fetchProjects}
                 />
               </TabsContent>
 
@@ -449,7 +464,7 @@ const AdminDashboard = () => {
               </TabsContent>
 
               <TabsContent value="splits">
-                <AdminPaymentSplits profiles={profiles} />
+                <AdminPaymentSplits profiles={clientProfiles} />
               </TabsContent>
 
               <TabsContent value="vapi">
