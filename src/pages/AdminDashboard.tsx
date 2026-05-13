@@ -337,6 +337,85 @@ const AdminDashboard = () => {
               </TabsList>
 
               <TabsContent value="projects">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                  <h2 className="font-display text-base font-semibold text-foreground">All Projects</h2>
+                  <Dialog open={projectDialogOpen} onOpenChange={(open) => { setProjectDialogOpen(open); if (!open) { setNewProject(EMPTY_NEW_PROJECT); setNewProjectTech(""); } }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase sm:w-auto w-full">
+                        <Plus className="h-4 w-4" /> Add New Project
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="font-display">Add New Project</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 mt-2">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Client</label>
+                          <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
+                            <SelectTrigger><SelectValue placeholder="Select a client" /></SelectTrigger>
+                            <SelectContent>
+                              {Object.values(profiles).map((profile) => (
+                                <SelectItem key={profile.id} value={profile.id}>
+                                  {profile.full_name || "Unnamed client"}{profile.company_name ? ` — ${profile.company_name}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                            <Input value={newProject.title} onChange={(e) => setNewProject({ ...newProject, title: e.target.value })} placeholder="Project title" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Timeline</label>
+                            <Input value={newProject.estimated_timeline} onChange={(e) => setNewProject({ ...newProject, estimated_timeline: e.target.value })} placeholder="e.g. 6-8 weeks" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                          <Textarea value={newProject.description} onChange={(e) => setNewProject({ ...newProject, description: e.target.value })} placeholder="Project scope or summary" rows={3} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Tech Stack (comma-separated)</label>
+                          <Input value={newProjectTech} onChange={(e) => setNewProjectTech(e.target.value)} placeholder="React, TypeScript, AI" />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                            <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value as ProjectStatus })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>{PROJECT_STATUSES.map((status) => <SelectItem key={status} value={status}>{status.replace("_", " ")}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Payment</label>
+                            <Select value={newProject.payment_status} onValueChange={(value) => setNewProject({ ...newProject, payment_status: value as PaymentStatus })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>{PAYMENT_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Quoted ($)</label>
+                            <Input type="number" min={0} value={newProject.quoted_amount} onChange={(e) => setNewProject({ ...newProject, quoted_amount: Number(e.target.value) || 0 })} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Progress (%)</label>
+                            <Input type="number" min={0} max={100} value={newProject.progress} onChange={(e) => setNewProject({ ...newProject, progress: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                          <Button variant="ghost" onClick={() => setProjectDialogOpen(false)}>Cancel</Button>
+                          <Button onClick={addProject} disabled={savingProject || !newProject.client_id || !newProject.title.trim()} className="gap-2">
+                            {savingProject ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            Add Project
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <AdminProjectList
                   projects={projects}
                   profiles={profiles}
