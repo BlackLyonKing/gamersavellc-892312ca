@@ -49,6 +49,30 @@ interface Message {
   sender_id: string;
 }
 
+interface NewProjectForm {
+  client_id: string;
+  title: string;
+  description: string;
+  status: ProjectStatus;
+  payment_status: PaymentStatus;
+  quoted_amount: number;
+  paid_amount: number;
+  progress: number;
+  estimated_timeline: string;
+}
+
+const EMPTY_NEW_PROJECT: NewProjectForm = {
+  client_id: "",
+  title: "",
+  description: "",
+  status: "pending",
+  payment_status: "unpaid",
+  quoted_amount: 0,
+  paid_amount: 0,
+  progress: 0,
+  estimated_timeline: "",
+};
+
 const AdminDashboard = () => {
   const { user, signOut, loading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -70,6 +94,10 @@ const AdminDashboard = () => {
   const [newMilestoneDesc, setNewMilestoneDesc] = useState("");
   const [newMilestoneDue, setNewMilestoneDue] = useState("");
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [newProject, setNewProject] = useState<NewProjectForm>(EMPTY_NEW_PROJECT);
+  const [newProjectTech, setNewProjectTech] = useState("");
+  const [savingProject, setSavingProject] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -77,18 +105,17 @@ const AdminDashboard = () => {
   }, [user, authLoading, isAdmin, navigate]);
 
   const fetchProjects = useCallback(async () => {
-    const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
+    const [{ data }, { data: profileData }] = await Promise.all([
+      supabase.from("projects").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("*").order("full_name"),
+    ]);
     const projectList = (data as Project[]) || [];
     setProjects(projectList);
     setLoadingProjects(false);
 
-    const clientIds = [...new Set(projectList.map((p) => p.client_id))];
-    if (clientIds.length > 0) {
-      const { data: profileData } = await supabase.from("profiles").select("*").in("id", clientIds);
-      const profileMap: Record<string, Profile & { phone?: string | null }> = {};
-      (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
-      setProfiles(profileMap);
-    }
+    const profileMap: Record<string, Profile & { phone?: string | null }> = {};
+    (profileData || []).forEach((p: any) => { profileMap[p.id] = p; });
+    setProfiles(profileMap);
   }, []);
 
   const fetchCounts = useCallback(async () => {
@@ -158,6 +185,39 @@ const AdminDashboard = () => {
       setSelectedProject(null);
       toast({ title: "Project deleted" });
     }
+  };
+
+  const addProject = async () => {
+    if (!newProject.client_id || !newProject.title.trim()) {
+      toast({ title: "Client and title are required", variant: "destructive" });
+      return;
+    }
+
+    setSavingProject(true);
+    const techStack = newProjectTech.split(",").map((item) => item.trim()).filter(Boolean);
+    const { data, error } = await supabase.from("projects").insert({
+      client_id: newProject.client_id,
+      title: newProject.title.trim(),
+      description: newProject.description.trim(),
+      status: newProject.status,
+      payment_status: newProject.payment_status,
+      quoted_amount: newProject.quoted_amount,
+      paid_amount: newProject.paid_amount,
+      progress: newProject.progress,
+      estimated_timeline: newProject.estimated_timeline.trim(),
+      tech_stack: techStack,
+    } as any).select("*").single();
+
+    if (error) {
+      toast({ title: "Couldn't add project", description: error.message, variant: "destructive" });
+    } else {
+      setProjects((prev) => [data as Project, ...prev]);
+      setNewProject(EMPTY_NEW_PROJECT);
+      setNewProjectTech("");
+      setProjectDialogOpen(false);
+      toast({ title: "Project added" });
+    }
+    setSavingProject(false);
   };
 
   const sendMessage = async () => {
@@ -277,6 +337,85 @@ const AdminDashboard = () => {
               </TabsList>
 
               <TabsContent value="projects">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                  <h2 className="font-display text-base font-semibold text-foreground">All Projects</h2>
+                  <Dialog open={projectDialogOpen} onOpenChange={(open) => { setProjectDialogOpen(open); if (!open) { setNewProject(EMPTY_NEW_PROJECT); setNewProjectTech(""); } }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-2 font-display text-xs tracking-wider uppercase sm:w-auto w-full">
+                        <Plus className="h-4 w-4" /> Add New Project
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="font-display">Add New Project</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 mt-2">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Client</label>
+                          <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
+                            <SelectTrigger><SelectValue placeholder="Select a client" /></SelectTrigger>
+                            <SelectContent>
+                              {Object.values(profiles).map((profile) => (
+                                <SelectItem key={profile.id} value={profile.id}>
+                                  {profile.full_name || "Unnamed client"}{profile.company_name ? ` — ${profile.company_name}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                            <Input value={newProject.title} onChange={(e) => setNewProject({ ...newProject, title: e.target.value })} placeholder="Project title" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Timeline</label>
+                            <Input value={newProject.estimated_timeline} onChange={(e) => setNewProject({ ...newProject, estimated_timeline: e.target.value })} placeholder="e.g. 6-8 weeks" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                          <Textarea value={newProject.description} onChange={(e) => setNewProject({ ...newProject, description: e.target.value })} placeholder="Project scope or summary" rows={3} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Tech Stack (comma-separated)</label>
+                          <Input value={newProjectTech} onChange={(e) => setNewProjectTech(e.target.value)} placeholder="React, TypeScript, AI" />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                            <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value as ProjectStatus })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>{PROJECT_STATUSES.map((status) => <SelectItem key={status} value={status}>{status.replace("_", " ")}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Payment</label>
+                            <Select value={newProject.payment_status} onValueChange={(value) => setNewProject({ ...newProject, payment_status: value as PaymentStatus })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>{PAYMENT_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Quoted ($)</label>
+                            <Input type="number" min={0} value={newProject.quoted_amount} onChange={(e) => setNewProject({ ...newProject, quoted_amount: Number(e.target.value) || 0 })} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Progress (%)</label>
+                            <Input type="number" min={0} max={100} value={newProject.progress} onChange={(e) => setNewProject({ ...newProject, progress: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                          <Button variant="ghost" onClick={() => setProjectDialogOpen(false)}>Cancel</Button>
+                          <Button onClick={addProject} disabled={savingProject || !newProject.client_id || !newProject.title.trim()} className="gap-2">
+                            {savingProject ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            Add Project
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <AdminProjectList
                   projects={projects}
                   profiles={profiles}
