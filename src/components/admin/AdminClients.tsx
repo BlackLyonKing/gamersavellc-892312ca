@@ -141,6 +141,35 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
 
   const clients = Object.values(profiles);
 
+  const editClientDialog = (
+    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle className="font-display">Edit Client</DialogTitle></DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Full name</label>
+            <Input value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Company</label>
+            <Input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+            <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={submitEditClient} disabled={editSaving} className="gap-2">
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const addClientDialog = (
     <Dialog open={addOpen} onOpenChange={setAddOpen}>
       <DialogTrigger asChild>
@@ -185,6 +214,7 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
         <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
         {addClientDialog}
       </div>
+      {editClientDialog}
       <div className="text-center py-16">
         <Users className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
         <p className="text-muted-foreground font-display">No clients yet</p>
@@ -198,6 +228,7 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
         <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
         {addClientDialog}
       </div>
+      {editClientDialog}
       <div className="grid gap-4 md:grid-cols-2">
         {clients.map((client, i) => {
           const summary = projectSummaries.find((s) => s.client_id === client.id);
