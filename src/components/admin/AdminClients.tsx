@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar, UserPlus } from "lucide-react";
+import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar, UserPlus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -61,6 +61,10 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ email: "", full_name: "", company_name: "", phone: "" });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", company_name: "", phone: "" });
+  const [editSaving, setEditSaving] = useState(false);
   const { toast } = useToast();
 
   const submitNewClient = async () => {
@@ -78,6 +82,35 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
     toast({ title: "Client added", description: "They'll receive a password setup email." });
     setForm({ email: "", full_name: "", company_name: "", phone: "" });
     setAddOpen(false);
+    onClientCreated?.();
+  };
+
+  const openEdit = (client: Profile & { phone?: string | null; company_name?: string | null }) => {
+    setEditClientId(client.id);
+    setEditForm({
+      full_name: client.full_name || "",
+      company_name: (client as any).company_name || "",
+      phone: (client as any).phone || "",
+    });
+    setEditOpen(true);
+  };
+
+  const submitEditClient = async () => {
+    if (!editClientId) return;
+    setEditSaving(true);
+    const { error } = await supabase.from("profiles").update({
+      full_name: editForm.full_name,
+      company_name: editForm.company_name,
+      phone: editForm.phone,
+    }).eq("id", editClientId);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Client updated" });
+    setEditOpen(false);
+    setEditClientId(null);
     onClientCreated?.();
   };
 
@@ -107,6 +140,35 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
   if (loading) return <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" /></div>;
 
   const clients = Object.values(profiles);
+
+  const editClientDialog = (
+    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle className="font-display">Edit Client</DialogTitle></DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Full name</label>
+            <Input value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Company</label>
+            <Input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+            <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={submitEditClient} disabled={editSaving} className="gap-2">
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   const addClientDialog = (
     <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -152,6 +214,7 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
         <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
         {addClientDialog}
       </div>
+      {editClientDialog}
       <div className="text-center py-16">
         <Users className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
         <p className="text-muted-foreground font-display">No clients yet</p>
@@ -165,6 +228,7 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
         <h2 className="font-display text-base font-semibold text-foreground">All Clients</h2>
         {addClientDialog}
       </div>
+      {editClientDialog}
       <div className="grid gap-4 md:grid-cols-2">
         {clients.map((client, i) => {
           const summary = projectSummaries.find((s) => s.client_id === client.id);
@@ -216,6 +280,14 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
                         </Button>
                       )}
                     </div>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={() => openEdit(client)}
+                      title="Edit client"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   {ob && isOpen && (
