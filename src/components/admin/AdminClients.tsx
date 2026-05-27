@@ -249,6 +249,14 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
                         </Button>
                       )}
                     </div>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={() => openEdit(client)}
+                      title="Edit client"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   {ob && isOpen && (
