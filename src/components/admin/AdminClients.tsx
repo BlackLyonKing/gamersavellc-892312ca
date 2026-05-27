@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar, UserPlus } from "lucide-react";
+import { Users, Loader2, Mail, Phone, Building, ChevronDown, ChevronUp, Calendar, UserPlus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -61,6 +61,10 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ email: "", full_name: "", company_name: "", phone: "" });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", company_name: "", phone: "" });
+  const [editSaving, setEditSaving] = useState(false);
   const { toast } = useToast();
 
   const submitNewClient = async () => {
@@ -78,6 +82,35 @@ const AdminClients = ({ profiles, projectSummaries, loading, onClientCreated }: 
     toast({ title: "Client added", description: "They'll receive a password setup email." });
     setForm({ email: "", full_name: "", company_name: "", phone: "" });
     setAddOpen(false);
+    onClientCreated?.();
+  };
+
+  const openEdit = (client: Profile & { phone?: string | null; company_name?: string | null }) => {
+    setEditClientId(client.id);
+    setEditForm({
+      full_name: client.full_name || "",
+      company_name: (client as any).company_name || "",
+      phone: (client as any).phone || "",
+    });
+    setEditOpen(true);
+  };
+
+  const submitEditClient = async () => {
+    if (!editClientId) return;
+    setEditSaving(true);
+    const { error } = await supabase.from("profiles").update({
+      full_name: editForm.full_name,
+      company_name: editForm.company_name,
+      phone: editForm.phone,
+    }).eq("id", editClientId);
+    setEditSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Client updated" });
+    setEditOpen(false);
+    setEditClientId(null);
     onClientCreated?.();
   };
 
