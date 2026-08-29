@@ -112,6 +112,11 @@ Tech Stack: ${quote.techStack.join(", ")}
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Project Quote Tool — Gamers Ave LLC"
+        description="Estimate the cost and timeline of your software, AI, or Web3 project with the Gamers Ave LLC AI-powered quote tool."
+        path="/#/quote-tool"
+      />
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
