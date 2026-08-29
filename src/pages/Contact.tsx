@@ -80,6 +80,11 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background bg-grid">
+      <Seo
+        title="Contact Gamers Ave LLC — Talk to Our Team"
+        description="Send a message to the Gamers Ave LLC team about AI agents, voice concierge, SEO, or custom software projects. We reply quickly."
+        path="/#/contact"
+      />
       <div className="max-w-2xl mx-auto px-6 py-12">
         <Link
           to="/"
