@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, BrainCircuit, Network, Hexagon, MessageSquareText, Lightbulb, Headphones } from "lucide-react";
+import { Search, BrainCircuit, Network, Hexagon, MessageSquareText, Lightbulb, Headphones, Workflow } from "lucide-react";
 
 const services = [
   {
@@ -37,6 +37,12 @@ const services = [
     name: "Voice Concierge",
     description:
       "AI-powered voice concierge service that handles inbound calls, appointment booking, FAQ resolution, and warm handoffs — delivering 24/7 professional phone presence for your business.",
+  },
+  {
+    icon: Workflow,
+    name: "Google Workspace + AI",
+    description:
+      "Connect Gmail, Calendar, Drive, Docs, and Sheets to intelligent agents that triage your inbox, schedule meetings, generate documents, and surface insights from your business data — built right into the tools you already use.",
   },
   {
     icon: Lightbulb,
