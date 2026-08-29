@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, DollarSign, Clock, Zap, AlertTriangle, Lightbulb, ArrowLeft, Copy, Check } from "lucide-react";
